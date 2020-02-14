@@ -1,0 +1,6 @@
+Vagrant.configure("2") do |config|
+  config.vm.box = "qpbdqp/c7k5sf"
+  config.vm.box_version = "1.0"
+  config.vm.synced_folder ".", "/vagrant", type: "virtualbox"
+  config.vm.box_check_update = false
+end

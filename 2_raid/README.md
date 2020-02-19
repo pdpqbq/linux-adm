@@ -1,5 +1,8 @@
 ### Добавить в Vagrantfile еще дисков
 
+Vagrantfile с дисками собирает raid6 при запуске
+Также скрипты для сборки выделены в отдельные файлы
+
 ### Собрать R6
 ```
 mdadm --zero-superblock --force /dev/sd{b,c,d,e,f,g,h}

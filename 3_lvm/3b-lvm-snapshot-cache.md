@@ -167,9 +167,6 @@ file1
 
 [root@lvm ~]# umount /opt
 
-[root@lvm ~]# lvconvert --merge /dev/vg_data/
-data_snap  lv_data
-
 [root@lvm ~]# lvconvert --merge /dev/vg_data/data_snap
   Merging of volume vg_data/data_snap started.
   vg_data/lv_data: Merged: 99.97%
@@ -205,3 +202,6 @@ sde                       8:64   0    1G  0 disk
 └─vg_data-cpool_cmeta   253:4    0    8M  0 lvm
   └─vg_data-lv_data     253:2    0   10G  0 lvm  /opt
 ```
+### Литература
+- [Red Hat Enterprise Linux 7 Logical Volume Manager Administration - Creating LVM Cache Logical Volumes](
+https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/logical_volume_manager_administration/LV#lvm_cache_volume_creation)

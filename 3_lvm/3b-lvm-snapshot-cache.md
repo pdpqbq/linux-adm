@@ -22,7 +22,7 @@ sde                       8:64   0    1G  0 disk
 
 На sdd, sde сделаем кэш
 
-###### Создаем pv, vg, lv
+Создаем pv, vg, lv
 ```
 [root@lvm ~]# pvcreate /dev/sd{b,c,d,e}
   Physical volume "/dev/sdb" successfully created.
@@ -104,7 +104,7 @@ Devices:
    ID        SIZE  PATH
     1    10.00GiB  /dev/vg_data/lv_data
 ```
-###### Монтируем в /opt, создаем снэпшот, удаляем и восстанавливаем данные
+Монтируем в /opt, создаем снэпшот, удаляем и восстанавливаем данные
 ```
 [root@lvm ~]# mount /dev/vg_data/lv_data /opt
 

@@ -1,4 +1,4 @@
-###### Работа с LVM
+### Работа с LVM
 
 - уменьшить том под / до 8G
 - выделить том под /home
@@ -11,12 +11,12 @@
 - удалить часть файлов
 - восстановится со снэпшота
 
-###### xfsdump будет необходим для снятия копии / тома
+xfsdump будет необходим для снятия копии / тома
 ```
 [root@lvm ~]# yum install -y xfsdump
 Complete!
 ```
-###### Создаем pv, vg, lv под новый корень
+Создаем pv, vg, lv под новый корень
 ```
 [root@lvm ~]# pvcreate /dev/sdb
   Physical volume "/dev/sdb" successfully created.
@@ -38,7 +38,7 @@ log      =internal log           bsize=4096   blocks=2560, version=2
          =                       sectsz=512   sunit=0 blks, lazy-count=1
 realtime =none                   extsz=4096   blocks=0, rtextents=0
 ```
-###### Копируем корень на новый lv
+Копируем корень на новый lv
 ```
 [root@lvm ~]# mount /dev/vg_root/lv_root /mnt
 
@@ -91,7 +91,7 @@ bin  boot  dev  etc  home  lib  lib64  media  mnt  opt  proc  root  run  sbin  s
 
 [root@lvm ~]# for i in /proc /sys /dev /run /boot; do mount --bind $i /mnt/$i; done
 ```
-###### Настраиваем grub
+Настраиваем grub
 ```
 [root@lvm ~]# chroot /mnt
 
@@ -180,9 +180,9 @@ sdc                       8:32   0    2G  0 disk
 sdd                       8:48   0    1G  0 disk
 sde                       8:64   0    1G  0 disk
 ```
-###### Перезагрузка с новым корнем
+Перезагрузка с новым корнем
 
-###### Удаляем старый lv, создаем новый размером 8 Гб и повторяем предыдущие действия, за исключением правки /etc/grub2/grub.cfg
+Удаляем старый lv, создаем новый размером 8 Гб и повторяем предыдущие действия, за исключением правки /etc/grub2/grub.cfg
 ```
 [root@lvm ~]# lsblk
 NAME                    MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
@@ -335,7 +335,7 @@ Skipping udev rule: 91-permissions.rules
 *** Creating image file done ***
 *** Creating initramfs image file '/boot/initramfs-3.10.0-862.2.3.el7.x86_64.img' done ***
 ```
-###### Пока не перезагружаемся и не выходим из под chroot. На свободных дисках создаем зеркало для /var
+Пока не перезагружаемся и не выходим из под chroot. На свободных дисках создаем зеркало для /var
 ```
 [root@lvm boot]# pvcreate /dev/sdc /dev/sdd
   Physical volume "/dev/sdc" successfully created.
@@ -413,7 +413,7 @@ UUID="56936b48-0c17-4cd6-b2cf-26efc394706a" /var ext4 defaults 0 0
 
 [root@lvm ~]# exit
 ```
-###### После чего можно успешно перезагружаться в новый уменьшенный root и удалять временную Volume Group
+После чего можно успешно перезагружаться в новый уменьшенный root и удалять временную Volume Group
 ```
 [root@lvm ~]# lsblk
 NAME                     MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
@@ -460,7 +460,7 @@ Do you really want to remove active logical volume vg_root/lv_root? [y/n]: y
 [root@lvm ~]# pvremove /dev/sdb
   Labels on physical volume "/dev/sdb" successfully wiped.
 ```
-###### Выделяем том под /home по тому же принципу что делали для /var
+Выделяем том под /home по тому же принципу что делали для /var
 ```
 [root@lvm ~]# lvcreate -n LogVol_Home -L 2G /dev/VolGroup00
   Logical volume "LogVol_Home" created.
@@ -503,7 +503,7 @@ UUID=570897ca-e759-4c81-90cf-389da6eee4cc /boot                   xfs     defaul
 UUID="56936b48-0c17-4cd6-b2cf-26efc394706a" /var ext4 defaults 0 0
 UUID="b7c49850-f3c1-4856-b411-807701ad2c55" /home xfs defaults 0 0
 ```
-###### Создаем файлы, делаем снэпшот, удаляем файлы, восстанавливаем со снэпшота
+Создаем файлы, делаем снэпшот, удаляем файлы, восстанавливаем со снэпшота
 ```
 [root@lvm ~]# touch /home/file{1..20}
 

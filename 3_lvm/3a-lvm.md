@@ -86,9 +86,6 @@ xfsdump: Dump Status: SUCCESS
 xfsrestore: restore complete: 7 seconds elapsed
 xfsrestore: Restore Status: SUCCESS
 
-[root@lvm ~]# ls /mnt
-bin  boot  dev  etc  home  lib  lib64  media  mnt  opt  proc  root  run  sbin  srv  sys  tmp  usr  vagrant  var
-
 [root@lvm ~]# for i in /proc /sys /dev /run /boot; do mount --bind $i /mnt/$i; done
 ```
 Настраиваем grub
@@ -160,25 +157,12 @@ Skipping udev rule: 91-permissions.rules
 [root@lvm boot]# vi /boot/grub2/grub.cfg
 
 [root@lvm boot]# cat /boot/grub2/grub.cfg | grep rd.lvm.lv=vg_root/lv_root
-	linux16 /vmlinuz-3.10.0-862.2.3.el7.x86_64 root=/dev/mapper/vg_root-lv_root ro no_timer_check console=tty0 console=ttyS0,115200n8 net.ifnames=0 biosdevname=0 elevator=noop crashkernel=auto rd.lvm.lv=vg_root/lv_root rd.lvm.lv=vg_root/lv_root rhgb quiet
+	linux16 /vmlinuz-3.10.0-862.2.3.el7.x86_64 root=/dev/mapper/vg_root-lv_root ro no_timer_check console=tty0 console=ttyS0,115200n8 net.ifnames=0 biosdevname=0 elevator=noop crashkernel=auto rd.lvm.lv=vg_root/lv_root rd.lvm.lv=VolGroup00/LogVol01 rhgb quiet
 
 [root@lvm boot]# exit
+  exit
 
-[root@lvm ~]# exit
-
-[root@lvm ~]# lsblk
-NAME                    MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
-sda                       8:0    0   40G  0 disk
-├─sda1                    8:1    0    1M  0 part
-├─sda2                    8:2    0    1G  0 part /mnt/boot
-└─sda3                    8:3    0   39G  0 part
-  ├─VolGroup00-LogVol00 253:0    0 37.5G  0 lvm  /
-  └─VolGroup00-LogVol01 253:1    0  1.5G  0 lvm  [SWAP]
-sdb                       8:16   0   10G  0 disk
-└─vg_root-lv_root       253:2    0   10G  0 lvm  /mnt
-sdc                       8:32   0    2G  0 disk
-sdd                       8:48   0    1G  0 disk
-sde                       8:64   0    1G  0 disk
+[root@lvm ~]# reboot
 ```
 Перезагрузка с новым корнем
 
@@ -190,8 +174,8 @@ sda                       8:0    0   40G  0 disk
 ├─sda1                    8:1    0    1M  0 part
 ├─sda2                    8:2    0    1G  0 part /boot
 └─sda3                    8:3    0   39G  0 part
-  ├─VolGroup00-LogVol00 253:1    0 37.5G  0 lvm
-  └─VolGroup00-LogVol01 253:2    0  1.5G  0 lvm  [SWAP]
+  ├─VolGroup00-LogVol01 253:1    0  1.5G  0 lvm  [SWAP]
+  └─VolGroup00-LogVol00 253:2    0 37.5G  0 lvm  
 sdb                       8:16   0   10G  0 disk
 └─vg_root-lv_root       253:0    0   10G  0 lvm  /
 sdc                       8:32   0    2G  0 disk
@@ -410,8 +394,9 @@ UUID="56936b48-0c17-4cd6-b2cf-26efc394706a" /var ext4 defaults 0 0
 /dev/mapper/vg_var-lv_var: UUID="56936b48-0c17-4cd6-b2cf-26efc394706a" TYPE="ext4"
 
 [root@lvm boot]# exit
+exit
 
-[root@lvm ~]# exit
+[root@lvm ~]# reboot
 ```
 После чего можно успешно перезагружаться в новый уменьшенный root и удалять временную Volume Group
 ```
@@ -424,28 +409,28 @@ sda                        8:0    0   40G  0 disk
   ├─VolGroup00-LogVol00  253:0    0    8G  0 lvm  /
   └─VolGroup00-LogVol01  253:1    0  1.5G  0 lvm  [SWAP]
 sdb                        8:16   0   10G  0 disk
-└─vg_root-lv_root        253:6    0   10G  0 lvm
+└─vg_root-lv_root        253:2    0   10G  0 lvm  
 sdc                        8:32   0    2G  0 disk
-├─vg_var-lv_var_rmeta_0  253:2    0    4M  0 lvm
+├─vg_var-lv_var_rmeta_0  253:3    0    4M  0 lvm  
 │ └─vg_var-lv_var        253:7    0  952M  0 lvm  /var
-└─vg_var-lv_var_rimage_0 253:3    0  952M  0 lvm
+└─vg_var-lv_var_rimage_0 253:4    0  952M  0 lvm  
   └─vg_var-lv_var        253:7    0  952M  0 lvm  /var
 sdd                        8:48   0    1G  0 disk
-├─vg_var-lv_var_rmeta_1  253:4    0    4M  0 lvm
+├─vg_var-lv_var_rmeta_1  253:5    0    4M  0 lvm  
 │ └─vg_var-lv_var        253:7    0  952M  0 lvm  /var
-└─vg_var-lv_var_rimage_1 253:5    0  952M  0 lvm
+└─vg_var-lv_var_rimage_1 253:6    0  952M  0 lvm  
   └─vg_var-lv_var        253:7    0  952M  0 lvm  /var
 sde                        8:64   0    1G  0 disk
 
 [root@lvm ~]# lvs
   LV       VG         Attr       LSize   Pool Origin Data%  Meta%  Move Log Cpy%Sync Convert
-  LogVol00 VolGroup00 -wi-ao----   8.00g
-  LogVol01 VolGroup00 -wi-ao----   1.50g
-  lv_root  vg_root    -wi-a----- <10.00g
-  lv_var   vg_var     rwi-aor--- 952.00m                                    100.00
+  LogVol00 VolGroup00 -wi-ao----   8.00g                                                    
+  LogVol01 VolGroup00 -wi-ao----   1.50g                                                    
+  lv_root  vg_root    -wi-a----- <10.00g                                                    
+  lv_var   vg_var     rwi-aor--- 952.00m                                    100.00          
 
 [root@lvm ~]# vgs
-  VG         #PV #LV #SN Attr   VSize   VFree
+  VG         #PV #LV #SN Attr   VSize   VFree  
   VolGroup00   1   2   0 wz--n- <38.97g <29.47g
   vg_root      1   1   0 wz--n- <10.00g      0
   vg_var       2   1   0 wz--n-   2.99g   1.12g

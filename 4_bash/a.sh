@@ -31,7 +31,7 @@ parse() # разбор строки
 	log_time=`echo $log_line | awk -F "#" '{ print $2 }'`
 	log_ip=`echo $log_line | awk -F "#" '{ print $1 }'`
 	log_url=`echo $log_line | awk -F "#" '{ print $3 }' | \\
-									sed 's/ HTTP\/.\..$//; s/^GET //; s/^POST //; s/^POST //'` # удаление HTTP GET POST HEAD
+									sed 's/ HTTP\/.\..$//; s/^GET //; s/^POST //; s/^HEAD //'` # удаление HTTP GET POST HEAD
 	log_code=`echo $log_line | awk -F "#" '{ print $4 }'`
 	#echo $log_ip, $log_time, $log_url, $log_code
 	ip_list+=($log_ip) # заполнение массивов

@@ -13,8 +13,9 @@ declare -a code_list # http code
 declare -a error_list # http error
 declare -i mark_count
 declare -i mark_current
+mark_str="##########"
 lock=`basename $0 .sh`.lock # файл для мультизапуска
-conf=`basename $0 .sh`.cfg # файл количеством меток
+conf=`basename $0 .sh`.cfg # файл с количеством меток
 msg=`basename $0 .sh`.msg # файл с сообщением
 have_job=0 # если есть работа то 1
 
@@ -47,8 +48,8 @@ if [ -f $conf ]; then read mark_count < $conf; else mark_count=0; fi # где з
 mark_current=0
 
 while read line; do
-	if [ "$line" = "##########" ]; then	mark_current+=1; fi # промотка файла
-	if [[ $mark_current -eq $mark_count ]] && [[ "$line" != "##########" ]]; then parse $line; fi;
+	if [ "$line" = "$mark_str" ]; then	mark_current+=1; fi # промотка файла
+	if [[ $mark_current -eq $mark_count ]] && [[ "$line" != "$mark_str" ]]; then parse $line; fi;
 done < `find . -name $log`
 
 if [ $have_job -eq 1 ]; then
@@ -68,7 +69,7 @@ if [ $have_job -eq 1 ]; then
 	else echo "      No errors" | tee -a $msg;
 	fi
 	echo | tee -a $msg
-	echo "##########" >> $log
+	echo $mark_str >> $log
 	mark_count+=1 && echo $mark_count > $conf # сохранение кол-ва меток
 
 else

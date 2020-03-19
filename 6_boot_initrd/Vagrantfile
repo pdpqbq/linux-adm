@@ -1,0 +1,17 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  config.vm.box = 'centos/7'
+  config.vm.define 'grub2lvm'
+  config.vm.box_check_update = false
+  config.vm.synced_folder ".", "/vagrant", disabled: true
+  config.vm.provider "virtualbox" do |vb|
+    hdd2 = "./hdd2.vdi"
+    unless File.exist?(hdd2)
+      vb.customize ["createhd", "--filename", hdd2, "--size", 5000]
+      vb.customize ['storagectl', :id, '--name', 'SATA', '--add', 'sata' ]
+      vb.customize ['storageattach', :id, '--storagectl', 'SATA', '--port', 1, '--device', 0, '--type', 'hdd', '--medium', hdd2]
+    end
+  end
+end

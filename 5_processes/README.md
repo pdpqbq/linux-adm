@@ -27,6 +27,7 @@
 Equal nice 0/0
 15100 pts/2    R+     0:00 bc -l -q
 15102 pts/2    R+     0:00 bc -l -q
+Working...
 
 real	0m31,742s
 user	0m15,860s
@@ -41,6 +42,7 @@ Nice 0/+19
 15185 (process ID) old priority 0, new priority 19
 15183 pts/2    R+     0:00 bc -l -q
 15185 pts/2    RN+    0:00 bc -l -q
+Working...
 
 real	0m16,209s
 user	0m15,961s

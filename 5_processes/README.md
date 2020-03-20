@@ -55,3 +55,5 @@ sys	0m0,000s
 
 ### Литература
 - [Занимательная математика командной строки](https://habr.com/ru/post/310566/)
+- [How do I get the total CPU usage of an application from /proc/pid/stat?](https://stackoverflow.com/questions/16726779/how-do-i-get-the-total-cpu-usage-of-an-application-from-proc-pid-stat)
+- [Структура /proc/pid/stat](https://web.archive.org/web/20130302063336/http://www.lindevdoc.org/wiki//proc/pid/stat)

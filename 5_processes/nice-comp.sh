@@ -3,8 +3,8 @@
 scale=5000 # влияет на продолжительность вычислений
 
 if [[ `which bc` = '' ]]; then
-		echo BC utility not found. Please install from http://ftp.gnu.org/gnu/bc/ or \'apt install bc\' or \'yum install bc\' and run again
-		exit
+	echo BC utility not found. Please install from http://ftp.gnu.org/gnu/bc/ or \'apt install bc\' or \'yum install bc\' and run again
+	exit
 fi
 
 echo "Equal nice 0/0"

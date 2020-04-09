@@ -1,0 +1,35 @@
+---
+- name: Setup PAM
+  become: yes
+  hosts: all
+  gather_facts: no
+  tasks:
+    - name: Setup users
+      script: setup.sh
+
+    - name: Install docker
+      yum:
+        name: docker
+        state: present
+
+    - name: Copy a new "sudoers" file into place, after passing validation with visudo
+      copy:
+        src: sudoers
+        dest: /etc/sudoers
+        validate: /sbin/visudo -csf %s
+
+    - name: Copy pam.d/sshd
+      copy:
+        src: sshd
+        dest: /etc/pam.d/sshd
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Copy pam.d/login
+      copy:
+        src: login
+        dest: /etc/pam.d/login
+        owner: root
+        group: root
+        mode: '0644'

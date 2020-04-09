@@ -1,0 +1,6 @@
+server {
+ server_name local.test;
+ listen 80;
+ root /var/www;
+ index index.html;
+}

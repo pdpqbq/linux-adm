@@ -1,0 +1,11 @@
+FROM alpine
+RUN apk update && apk upgrade && apk add nginx
+RUN mkdir -p /run/nginx # for pid file
+RUN mkdir -p /var/www # for www root
+RUN echo "daemon off;" >> /etc/nginx/nginx.conf
+COPY [ "nginx/conf/default.conf.no-php", "/etc/nginx/conf.d/default.conf" ]
+COPY [ "nginx/www/index.html", "/var/www" ]
+COPY [ "nginx/www/index.php", "/var/www" ]
+EXPOSE 1234
+ENTRYPOINT [ "nginx" ]
+

@@ -1,0 +1,114 @@
+---
+- name: log - web - elk
+  hosts: all
+  remote_user: vagrant
+  become: true
+  gather_facts: no
+
+  tasks:
+    - name: Install EPEL Repo package from standart repo
+      yum:
+        name: epel-release
+        state: present
+      tags:
+        - epel-package
+
+    - name: Install systemd-journal-gateway
+      yum:
+        name: systemd-journal-gateway
+        state: present
+      tags:
+        - systemd-journal-gateway
+
+    - name: Install lnav
+      yum:
+        name: lnav
+        state: present
+      tags:
+        - lnav
+
+    - name: Install nginx
+      yum:
+        name: nginx
+        state: latest
+      tags:
+        - nginx
+
+    - name: Install audispd-plugins
+      yum:
+        name: audispd-plugins
+        state: present
+      tags:
+        audispd-plugins
+
+    - name: Configure web server
+      script: ./cfg-web.sh
+      notify:
+        - Restart nginx
+      tags:
+        - cfg-web
+
+    - name: Configure log server
+      script: ./cfg-log.sh
+      tags:
+        - cfg-log
+
+    - name: Install elk repo
+      script: ./cfg-pre-elk.sh
+      tags:
+        - cfg-pre-elk
+
+    - name: Install elk
+      yum:
+        name:
+          - java-openjdk
+          - elasticsearch
+          - kibana
+          - logstash
+        state: present
+      tags:
+        - install-elk
+
+    - name: Install filebeat
+      yum:
+        name: filebeat
+        state: present
+      tags:
+        - filebeat
+
+    - name: Configure filebeat
+      copy:
+        src: config/filebeat.yml
+        dest: /etc/filebeat/filebeat.yml
+      notify:
+        - Enable filebeat
+      tags:
+        - filebeat-conf
+
+    - name: Configure elk services
+      copy: src={{ item.src }} dest={{ item.dest }}
+      with_items:
+        - { src: 'config/kibana.yml', dest: '/etc/kibana/kibana.yml' }
+        - { src: 'config/elasticsearch.yml', dest: '/etc/elasticsearch/elasticsearch.yml' }
+        - { src: 'config/logstash-nginx.conf', dest: '/etc/logstash/conf.d/logstash-nginx.conf' }
+      notify:
+        - Start elk services
+      tags:
+        - elk-conf
+
+  handlers:
+    - name: Restart nginx
+      systemd:
+        name: nginx
+        enabled: yes
+        state: restarted
+        masked: no
+
+    - name: Enable filebeat
+      systemd:
+        name: filebeat
+        enabled: yes
+        state: restarted
+
+    - name: Start elk services
+      script: ./cfg-post-elk.sh

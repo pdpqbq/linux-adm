@@ -109,7 +109,7 @@ Configuration - Data Sources - Add data source - Prometheus, указываем 
 
 Dashboards - Manage - Import, импортируем дэшборд Node Exporter Full - https://grafana.com/grafana/dashboards/1860
 
-В поле Select a Ptometheus data source выбираем Prometheus
+В поле Select a Prometheus data source выбираем Prometheus
 
 После настройки дэшборда получаем удобное представление метрик node_exporter
 

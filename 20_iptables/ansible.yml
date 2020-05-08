@@ -1,0 +1,83 @@
+---
+- name: iptables
+  hosts: all
+  become: true
+  gather_facts: no
+
+  tasks:
+    - name: inetRouter
+      script: ./ir.sh
+      notify:
+        - restart network
+      tags:
+        - ir
+
+    - name: inetRouter2
+      script: ./ir2.sh
+      notify:
+        - restart network
+      tags:
+        - ir2
+
+    - name: centralRouter
+      script: ./cr.sh
+      notify:
+        - restart network
+      tags:
+        - cr
+
+    - name: centralServer
+      script: ./cs.sh
+      notify:
+        - restart network
+      tags:
+        - cs
+
+    - name: epel-release
+      yum:
+        name: epel-release
+        state: present
+      tags:
+        - epel
+
+    - name: nginx
+      yum:
+        name: nginx
+        state: present
+      notify:
+        - start nginx
+      tags:
+        - nginx
+
+    - name: conntrack
+      yum:
+        name: conntrack
+        state: present
+      tags:
+        - conntrack
+
+    - name: ncat
+      yum:
+        name: nc
+        state: present
+      tags:
+        - ncat
+
+    - name: restart network
+      systemd:
+        name: network
+        state: restarted
+      tags:
+        - netrestart
+
+  handlers:
+    - name: restart network
+      systemd:
+        name: network
+        state: restarted
+
+    - name: start nginx
+      systemd:
+        name: nginx
+        enabled: yes
+        state: restarted

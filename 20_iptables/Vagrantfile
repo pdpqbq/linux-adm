@@ -1,0 +1,97 @@
+# -*- mode: ruby -*-
+# vim: set ft=ruby :
+
+MACHINES = {
+  :inetRouter => {
+        :box_name => "centos/7",
+        #:public => {:ip => '10.10.10.1', :adapter => 1},
+        :net => [
+                   {ip: '192.168.255.1', adapter: 2, netmask: "255.255.255.252", virtualbox__intnet: "rr1-p2p"}
+                ]
+  },
+  :inetRouter2 => {
+        :box_name => "centos/7",
+        #:public => {:ip => '10.10.10.1', :adapter => 1},
+        :net => [
+                   {ip: '192.168.255.5', adapter: 2, netmask: "255.255.255.252", virtualbox__intnet: "rr2-p2p"},
+                   {ip: '192.168.200.200', adapter: 3, netmask: "255.255.255.0"}
+                ]
+  },
+  :centralRouter => {
+        :box_name => "centos/7",
+        :net => [ {ip: '192.168.0.1', adapter: 2, netmask: "255.255.255.0", virtualbox__intnet: "cntr-lan"},
+                  {ip: '192.168.255.2', adapter: 3, netmask: "255.255.255.252", virtualbox__intnet: "rr1-p2p"},
+                  {ip: '192.168.255.6', adapter: 4, netmask: "255.255.255.252", virtualbox__intnet: "rr2-p2p"}
+                ]
+  },
+  :centralServer => {
+        :box_name => "centos/7",
+        :net => [
+                  {ip: '192.168.0.2', adapter: 2, netmask: "255.255.255.0", virtualbox__intnet: "cntr-lan"}
+                ]
+  }
+}
+
+Vagrant.configure("2") do |config|
+
+  MACHINES.each do |boxname, boxconfig|
+
+    config.vm.define boxname do |box|
+
+        box.vm.box = boxconfig[:box_name]
+        box.vm.host_name = boxname.to_s
+
+        boxconfig[:net].each do |ipconf|
+          box.vm.network "private_network", ipconf
+        end
+
+        if boxconfig.key?(:public)
+          box.vm.network "public_network", boxconfig[:public]
+        end
+
+        #box.vm.provision "shell", inline: <<-SHELL
+          #mkdir -p ~root/.ssh && cp ~vagrant/.ssh/auth* ~root/.ssh
+        #SHELL
+
+        case boxname.to_s
+        when "inetRouter"
+          box.vm.provision "ansible", playbook: "ansible.yml", tags: "conntrack"
+          box.vm.provision "ansible", playbook: "ansible.yml", tags: "ir"
+          box.vm.provision "ansible", playbook: "ansible.yml", tags: "netrestart"
+          public_key = File.read("id_rsa.pub")
+          box.vm.provision "shell", inline: "echo '#{public_key}' >> /home/vagrant/.ssh/authorized_keys"
+          box.vm.provision "shell", inline: "chmod 600 /home/vagrant/.ssh/authorized_keys"
+        when "inetRouter2"
+          box.vm.provision "ansible", playbook: "ansible.yml", tags: "conntrack"
+          box.vm.provision "ansible", playbook: "ansible.yml", tags: "ir2"
+          box.vm.provision "shell", inline: "echo '192.168.0.0/24 via 192.168.255.6 dev eth1' > /etc/sysconfig/network-scripts/route-eth1"
+          box.vm.provision "ansible", playbook: "ansible.yml", tags: "netrestart"
+        when "centralRouter"
+          box.vm.provision "ansible", playbook: "ansible.yml", tags: "conntrack"
+          box.vm.provision "ansible", playbook: "ansible.yml", tags: "ncat"
+          box.vm.provision "ansible", playbook: "ansible.yml", tags: "cr"
+          box.vm.provision "ansible", playbook: "ansible.yml", tags: "netrestart"
+          box.vm.provision "file", source: "id_rsa", destination: "/home/vagrant/.ssh/id_rsa"
+          box.vm.provision "file", source: "knocks.sh", destination: "/home/vagrant/knocks.sh"
+          public_key = File.read("id_rsa.pub")
+          box.vm.provision "shell", inline: "
+            mkdir -p /home/vagrant/.ssh
+            chmod 700 /home/vagrant/.ssh
+            echo 'Host *' >> /home/vagrant/.ssh/config
+            echo 'StrictHostKeyChecking no' >> /home/vagrant/.ssh/config
+            echo 'UserKnownHostsFile /dev/null' >> /home/vagrant/.ssh/config
+            chmod 600 /home/vagrant/.ssh/config
+          ", privileged: false
+        when "centralServer"
+          box.vm.provision "shell", inline: "echo DEFROUTE=no >> /etc/sysconfig/network-scripts/ifcfg-eth0"
+          box.vm.provision "shell", inline: "echo GATEWAY=192.168.0.1 >> /etc/sysconfig/network-scripts/ifcfg-eth1"
+          box.vm.provision "shell", inline: "service network restart && sleep 5"
+          box.vm.provision "ansible", playbook: "ansible.yml", tags: "conntrack"
+          box.vm.provision "ansible", playbook: "ansible.yml", tags: "epel"
+          box.vm.provision "ansible", playbook: "ansible.yml", tags: "nginx"
+          box.vm.provision "ansible", playbook: "ansible.yml", tags: "cs"
+          box.vm.provision "ansible", playbook: "ansible.yml", tags: "netrestart"
+        end
+      end
+  end
+end

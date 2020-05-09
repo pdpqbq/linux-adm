@@ -89,3 +89,5 @@ PING 3.3.3.3 (3.3.3.3) from 2.2.2.2 : 56(84) bytes of data.
 14:18:41.396069 IP 2.2.2.2 > 3.3.3.3: ICMP echo request, id 29492, seq 1, length 64
 14:18:41.396930 IP 3.3.3.3 > 2.2.2.2: ICMP echo reply, id 29492, seq 1, length 64
 ```
+### Литература
+- [Reverse Path Filtering (rp_filter) and Martians (log_martians)](https://www.theurbanpenguin.com/rp_filter-and-lpic-3-linux-security/)

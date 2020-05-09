@@ -1,0 +1,51 @@
+---
+- name: iptables
+  hosts: all
+  become: true
+  gather_facts: no
+
+  tasks:
+    - name: install quagga tcpdump
+      yum:
+        name:
+          - quagga
+          - tcpdump
+        state: present
+      tags: yum
+
+    - name: setup r1-2-3
+      script: ./r0.sh
+      tags: r0
+
+    - name: setup r1
+      script: ./r1.sh
+      tags: r1
+
+    - name: setup r2
+      script: ./r2.sh
+      tags: r2
+
+    - name: setup r3
+      script: ./r3.sh
+      tags: r3
+
+    - name: configure quagga r1
+      copy: src={{ item.src }} dest={{ item.dest }}
+      with_items:
+        - { src: 'config/zebra.conf.r1', dest: '/etc/quagga/zebra.conf' }
+        - { src: 'config/ospfd.conf.r1', dest: '/etc/quagga/ospfd.conf' }
+      tags: qr1
+
+    - name: configure quagga r2
+      copy: src={{ item.src }} dest={{ item.dest }}
+      with_items:
+        - { src: 'config/zebra.conf.r2', dest: '/etc/quagga/zebra.conf' }
+        - { src: 'config/ospfd.conf.r2', dest: '/etc/quagga/ospfd.conf' }
+      tags: qr2
+
+    - name: configure quagga r3
+      copy: src={{ item.src }} dest={{ item.dest }}
+      with_items:
+        - { src: 'config/zebra.conf.r3', dest: '/etc/quagga/zebra.conf' }
+        - { src: 'config/ospfd.conf.r3', dest: '/etc/quagga/ospfd.conf' }
+      tags: qr3

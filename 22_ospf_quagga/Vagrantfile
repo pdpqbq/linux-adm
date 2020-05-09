@@ -1,0 +1,53 @@
+# -*- mode: ruby -*-
+# vim: set ft=ruby :
+
+MACHINES = {
+  :r1 => {:box_name => "centos/7",
+          :net => [
+            {ip: '172.21.0.1', adapter: 2, netmask: "255.255.255.0", virtualbox__intnet: "r1r2"},
+            {ip: '172.31.0.1', adapter: 3, netmask: "255.255.255.0", virtualbox__intnet: "r1r3"}
+            ]
+  },
+  :r2 => {:box_name => "centos/7",
+          :net => [
+            {ip: '172.21.0.2', adapter: 2, netmask: "255.255.255.0", virtualbox__intnet: "r1r2"},
+            {ip: '172.23.0.2', adapter: 3, netmask: "255.255.255.0", virtualbox__intnet: "r2r3"}
+            ]
+  },
+  :r3 => {:box_name => "centos/7",
+          :net => [
+            {ip: '172.31.0.3', adapter: 2, netmask: "255.255.255.0", virtualbox__intnet: "r1r3"},
+            {ip: '172.23.0.3', adapter: 3, netmask: "255.255.255.0", virtualbox__intnet: "r2r3"}
+            ]
+  }
+}
+
+Vagrant.configure("2") do |config|
+  MACHINES.each do |boxname, boxconfig|
+    config.vm.define boxname do |box|
+      box.vm.box = boxconfig[:box_name]
+      box.vm.host_name = boxname.to_s
+      box.vm.host_name = boxname
+      boxconfig[:net].each do |ipconf|
+        box.vm.network "private_network", ipconf
+      end
+      case boxname.to_s
+      when "r1"
+        box.vm.provision "ansible", playbook: "ansible.yml", tags: "yum"
+        box.vm.provision "ansible", playbook: "ansible.yml", tags: "qr1"
+        box.vm.provision "ansible", playbook: "ansible.yml", tags: "r0"
+        box.vm.provision "ansible", playbook: "ansible.yml", tags: "r1"
+      when "r2"
+        box.vm.provision "ansible", playbook: "ansible.yml", tags: "yum"
+        box.vm.provision "ansible", playbook: "ansible.yml", tags: "qr2"
+        box.vm.provision "ansible", playbook: "ansible.yml", tags: "r0"
+        box.vm.provision "ansible", playbook: "ansible.yml", tags: "r2"
+      when "r3"
+        box.vm.provision "ansible", playbook: "ansible.yml", tags: "yum"
+        box.vm.provision "ansible", playbook: "ansible.yml", tags: "qr3"
+        box.vm.provision "ansible", playbook: "ansible.yml", tags: "r0"
+        box.vm.provision "ansible", playbook: "ansible.yml", tags: "r3"
+      end
+    end
+  end
+end

@@ -90,4 +90,5 @@ PING 3.3.3.3 (3.3.3.3) from 2.2.2.2 : 56(84) bytes of data.
 14:18:41.396930 IP 3.3.3.3 > 2.2.2.2: ICMP echo reply, id 29492, seq 1, length 64
 ```
 ### Литература
+- [Dynamic Routing in Linux with Quagga](https://www.admin-magazine.com/Articles/Routing-with-Quagga)
 - [Reverse Path Filtering (rp_filter) and Martians (log_martians)](https://www.theurbanpenguin.com/rp_filter-and-lpic-3-linux-security/)

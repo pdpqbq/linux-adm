@@ -1,0 +1,26 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure(2) do |config|
+  config.vm.box = "centos/7"
+  #config.vm.provider "virtualbox" do |v|
+    #v.customize ["modifyvm", :id, "--cpuexecutioncap", "20"]
+  #end
+  config.vm.define "server" do |server|
+
+      server.vm.hostname = "server.loc"
+      server.vm.network "private_network", ip: "192.168.20.10"
+
+      server.vm.provision "ansible", playbook: "ansible.yml"
+  end
+  config.vm.define "client" do |client|
+      client.vm.hostname = "client.loc"
+      client.vm.network "private_network", ip: "192.168.20.20"
+      client.vm.provision "ansible", playbook: "ansible.yml"
+  end
+  config.vm.define "rasclient" do |rasclient|
+      rasclient.vm.hostname = "rasclient.loc"
+      rasclient.vm.network "private_network", ip: "192.168.20.30"
+      rasclient.vm.provision "ansible", playbook: "ansible.yml"
+  end
+end

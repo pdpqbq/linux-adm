@@ -1,0 +1,154 @@
+---
+- name: general setup
+  hosts: all
+  remote_user: vagrant
+  become: true
+  gather_facts: no
+  tasks:
+    - name: install epel-release
+      yum:
+        name: epel-release
+        state: present
+    - name: install openvpn iperf3
+      yum:
+        name:
+          - openvpn
+          - iperf3
+        state: present
+
+- name: setup server
+  hosts: server
+  become: true
+  gather_facts: no
+  tasks:
+    - name: selinux off
+      command: setenforce 0
+    - name: install easyrsa
+      yum:
+        name: easy-rsa
+        state: present
+    - name: install ocserv
+      yum:
+        name: ocserv
+        state: present
+    - name: run commands
+      script: files/2/rassrv.sh
+    - name: create key
+      command: openvpn --genkey --secret /etc/openvpn/static.key
+    - name: replace key
+      copy:
+        src: files/1/static.key
+        dest: /etc/openvpn/static.key
+    - name: ca.crt
+      copy:
+        src: files/2/ca.crt
+        dest: /etc/openvpn/pki/ca.crt
+    - name: server.key
+      copy:
+        src: files/2/server.key
+        dest: /etc/openvpn/pki/private/server.key
+    - name: server.crt
+      copy:
+        src: files/2/server.crt
+        dest: /etc/openvpn/pki/issued/server.crt
+    - name: dh.pem
+      copy:
+        src: files/2/dh.pem
+        dest: /etc/openvpn/pki/dh.pem
+    - name: ta.key
+      copy:
+        src: files/2/ta.key
+        dest: /etc/openvpn/ta.key
+    - name: client.key
+      copy:
+        src: files/2/client.key
+        dest: /etc/openvpn/pki/private/client.key
+    - name: client.crt
+      copy:
+        src: files/2/client.crt
+        dest: /etc/openvpn/pki/issued/client.crt
+    - name: crl.pem
+      copy:
+        src: files/2/crl.pem
+        dest: /etc/openvpn/pki/crl.pem
+    - name: create openconnect config
+      copy:
+        src: files/3/ocserv.conf
+        dest: /etc/ocserv/ocserv.conf
+    - name: create server config
+      copy:
+        src: files/1/server.conf
+        dest: /etc/openvpn/server.conf
+    - name: create rasserver config
+      copy:
+        src: files/2/rasserver.conf
+        dest: /etc/openvpn/rasserver.conf
+    - name: start openvpn server
+      systemd:
+        name: openvpn@server
+        enabled: yes
+        state: restarted
+    - name: start openvpn rasserver
+      systemd:
+        name: openvpn@rasserver
+        enabled: yes
+        state: restarted
+    - name: start openconnect
+      systemd:
+        name: ocserv
+        enabled: yes
+        state: restarted
+
+- name: setup client
+  hosts: client
+  become: true
+  gather_facts: no
+  tasks:
+    - name: create client config
+      copy:
+        src: files/1/client.conf
+        dest: /etc/openvpn/client.conf
+    - name: get key
+      copy:
+        src: files/1/static.key
+        dest: /etc/openvpn/static.key
+    - name: start openvpn client
+      systemd:
+        name: openvpn@client
+        enabled: yes
+        state: restarted
+
+- name: setup ras client
+  hosts: rasclient
+  become: true
+  gather_facts: no
+  tasks:
+    - name: create rasclient config
+      copy:
+        src: files/2/rasclient.conf
+        dest: /etc/openvpn/rasclient.conf
+    - name: ca.crt
+      copy:
+        src: files/2/ca.crt
+        dest: /etc/openvpn/ca.crt
+    - name: ta.key
+      copy:
+        src: files/2/ta.key
+        dest: /etc/openvpn/ta.key
+    - name: client.key
+      copy:
+        src: files/2/client.key
+        dest: /etc/openvpn/client.key
+    - name: client.crt
+      copy:
+        src: files/2/client.crt
+        dest: /etc/openvpn/client.crt
+    - name: start openvpn client
+      systemd:
+        name: openvpn@rasclient
+        enabled: yes
+        state: restarted
+    - name: install openconnect
+      yum:
+        name: openconnect
+        state: present

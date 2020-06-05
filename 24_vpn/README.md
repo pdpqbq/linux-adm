@@ -132,7 +132,27 @@ Test Complete. Summary Results:
 [  4] Sent 2897 datagrams
 CPU Utilization: local/sender 0.9% (0.3%u/0.5%s), remote/receiver 0.0% (0.0%u/0.0%s)
 ```
-В учебной виртуальной среде нельзя выделить преимущество в скорости режима TUN. Загрузка CPU в обоих режимах на протоколе TCP - около 90%. В режиме TUN наблюдаем несколько меньше перепосылок. Достоинства и недостатки определяются областью применения. Если нужна связность L2 - используем TAP, если L3 - TUN.
+TAP работает в режиме моста, vpn-клиент находится в одном L2-сегменте с удаленной сетью и проходят широковещательные пакеты.
+```
+[root@server openvpn]# ip nei
+10.10.10.2 dev tap0 lladdr b6:27:63:8b:54:6b REACHABLE
+
+[root@server ~]# arping -I tap0 10.10.10.2
+ARPING 10.10.10.2 from 10.10.10.1 tap0
+Unicast reply from 10.10.10.2 [B6:27:63:8B:54:6B]  1.934ms
+```
+TUN работает в режиме маршрутизации, vpn-клиент находится в собственной подсети, пакеты в удаленную сеть маршрутизируются через openvpn.
+```
+[root@server openvpn]# ping 10.10.10.2
+PING 10.10.10.2 (10.10.10.2) 56(84) bytes of data.
+64 bytes from 10.10.10.2: icmp_seq=1 ttl=64 time=1.20 ms
+
+[root@server openvpn]# arping -I tun0 10.10.10.2
+arping: Device tun0 not available.
+
+[root@server openvpn]# ip nei | grep 10.10.10.2
+[root@server openvpn]# 
+```
 
 
 

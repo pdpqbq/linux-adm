@@ -19,14 +19,15 @@ https://gitlab.com/otus_linux/nginx-antiddos-example
 server {
     location / {
         root /opt;
-        if ($http_cookie ~* "otus=allow") {
-            rewrite ^/otus.txt https://hub.docker.com/r/pdpqbq/nginxddos;
+        if ($http_cookie !~* "otus=allow") {
+            set $uuu $uri;
+            rewrite ^/otus.txt$ /allow;
         }
-        rewrite ^/otus.txt /allow;
+        rewrite ^/otus.txt$ https://hub.docker.com/r/pdpqbq/nginxddos;
     location /allow {
         add_header Set-Cookie otus=allow;
-        return 301 /otus.txt;
-    }
+        return 301 $uuu;
+        }
     }
 }
 ```
@@ -40,7 +41,7 @@ server {
             return 200 error;
         }
         if ($http_cookie ~* "otus=allow") {
-            rewrite ^/otus.txt http://google.ru;
+            rewrite ^/otus.txt$ http://google.ru;
         }
     }
 ```

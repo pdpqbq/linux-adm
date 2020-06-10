@@ -50,5 +50,10 @@ server {
 sudo docker build -t nginxddos -f Dockerfile .
 sudo docker images
 sudo docker tag 237480d1ef91 pdpqbq/nginxddos:latest
+sudo docker login docker.io
 sudo docker push pdpqbq/nginxddos:latest
+```
+Проверка:
+```
+sudo docker run -p 80:80 pdpqbq/nginxddos:latest
 ```

@@ -1,0 +1,59 @@
+---
+- name: general setup
+  hosts: all
+  remote_user: vagrant
+  become: true
+  gather_facts: no
+
+  tasks:
+    - name: install epel-release
+      yum:
+        name: epel-release
+        state: present
+    - name: install borg
+      yum:
+        name: borgbackup
+        state: present
+
+- name: setup "server" host
+  hosts: server
+  remote_user: vagrant
+  become: true
+  gather_facts: no
+
+  tasks:
+    - name: edit hosts
+      blockinfile:
+        path: /etc/hosts
+        block: 192.168.20.20 backup
+    - name: copy ssh priv key
+      copy:
+        src: id_rsa
+        dest: /root/.ssh/
+        mode: 0600
+    - name: setup ssh
+      shell: |
+        chmod 700 /root/.ssh
+        echo 'Host *' >> /root/.ssh/config
+        echo 'StrictHostKeyChecking no' >> /root/.ssh/config
+        echo 'UserKnownHostsFile /dev/null' >> /root/.ssh/config
+        chmod 600 /root/.ssh/config
+      args:
+        warn: false
+
+- name: setup "backup" host
+  hosts: backup
+  remote_user: vagrant
+  become: true
+  gather_facts: no
+
+  tasks:
+    - name: edit hosts
+      blockinfile:
+        path: /etc/hosts
+        block: 192.168.20.10 server
+    - name: copy ssh pub key
+      authorized_key:
+        user: root
+        state: present
+        key: "{{ lookup('file', 'id_rsa.pub') }}"

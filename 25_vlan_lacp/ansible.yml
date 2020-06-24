@@ -1,0 +1,180 @@
+---
+- name: vlan - lacp
+  hosts: all
+  become: true
+  gather_facts: no
+
+  tasks:
+    - name: testClient1 vlan2
+      shell: |
+        cat > /etc/sysconfig/network-scripts/ifcfg-vlan2 << \EOF
+        ONBOOT=yes
+        TYPE=Ethernet
+        VLAN=yes
+        VLAN_NAME_TYPE=VLAN_PLUS_VID_NO_PAD
+        DEVICE=vlan2
+        PHYSDEV=eth1
+        VLAN_ID=2
+        BOOTPROTO=static
+        IPADDR=10.10.10.254
+        NETMASK=255.255.255.0
+        NM_CONTROLLED=no
+      notify:
+        - netrestart
+      tags:
+        - tc1
+
+    - name: edit hosts
+      blockinfile:
+        path: /etc/hosts
+        block: 10.10.10.1 testServer1
+      tags:
+        - tc1
+
+    - name: testClient2 vlan3
+      shell: |
+        cat > /etc/sysconfig/network-scripts/ifcfg-vlan3 << \EOF
+        ONBOOT=yes
+        TYPE=Ethernet
+        VLAN=yes
+        VLAN_NAME_TYPE=VLAN_PLUS_VID_NO_PAD
+        DEVICE=vlan3
+        PHYSDEV=eth1
+        VLAN_ID=3
+        BOOTPROTO=static
+        IPADDR=10.10.10.254
+        NETMASK=255.255.255.0
+        NM_CONTROLLED=no
+      notify:
+        - netrestart
+      tags:
+        - tc2
+
+    - name: edit hosts
+      blockinfile:
+        path: /etc/hosts
+        block: 10.10.10.1 testServer2
+      tags:
+        - tc2
+
+    - name: testServer1 vlan2
+      shell: |
+        cat > /etc/sysconfig/network-scripts/ifcfg-vlan2 << \EOF
+        ONBOOT=yes
+        TYPE=Ethernet
+        VLAN=yes
+        VLAN_NAME_TYPE=VLAN_PLUS_VID_NO_PAD
+        DEVICE=vlan2
+        PHYSDEV=eth1
+        VLAN_ID=2
+        BOOTPROTO=static
+        IPADDR=10.10.10.1
+        NETMASK=255.255.255.0
+        NM_CONTROLLED=no
+      notify:
+        - netrestart
+      tags:
+        - ts1
+
+    - name: edit hosts
+      blockinfile:
+        path: /etc/hosts
+        block: 10.10.10.254 testClient1
+      tags:
+        - ts1
+
+    - name: testServer2 vlan3
+      shell: |
+        cat > /etc/sysconfig/network-scripts/ifcfg-vlan3 << \EOF
+        ONBOOT=yes
+        TYPE=Ethernet
+        VLAN=yes
+        VLAN_NAME_TYPE=VLAN_PLUS_VID_NO_PAD
+        DEVICE=vlan3
+        PHYSDEV=eth1
+        VLAN_ID=3
+        BOOTPROTO=static
+        IPADDR=10.10.10.1
+        NETMASK=255.255.255.0
+        NM_CONTROLLED=no
+      notify:
+        - netrestart
+      tags:
+        - ts2
+
+    - name: edit hosts
+      blockinfile:
+        path: /etc/hosts
+        block: 10.10.10.254 testClient2
+      tags:
+        - ts2
+
+    - name: centralRouter bond0
+      shell: |
+        cat > /etc/sysconfig/network-scripts/ifcfg-bond0 << \EOF
+        DEVICE=bond0
+        NAME=bond0
+        TYPE=Bond
+        BONDING_MASTER=yes
+        IPADDR=10.0.0.1
+        NETMASK=255.255.255.0
+        ONBOOT=yes
+        BOOTPROTO=static
+        BONDING_OPTS="mode=1 miimon=100 fail_over_mac=1"
+        NM_CONTROLLED=no
+        USERCTL=no
+      notify:
+        - netrestart
+      tags:
+        - cr
+
+    - name: inetRouter bond0
+      shell: |
+        cat > /etc/sysconfig/network-scripts/ifcfg-bond0 << \EOF
+        DEVICE=bond0
+        NAME=bond0
+        TYPE=Bond
+        BONDING_MASTER=yes
+        IPADDR=10.0.0.2
+        NETMASK=255.255.255.0
+        ONBOOT=yes
+        BOOTPROTO=static
+        BONDING_OPTS="mode=1 miimon=100 fail_over_mac=1"
+        NM_CONTROLLED=no
+        USERCTL=no
+      notify:
+        - netrestart
+      tags:
+        - ir
+
+    - name: bond eth1
+      shell: |
+        cat > /etc/sysconfig/network-scripts/ifcfg-eth1 << \EOF
+        DEVICE=eth1
+        ONBOOT=yes
+        BOOTPROTO=none
+        MASTER=bond0
+        SLAVE=yes
+        NM_CONTROLLED=no
+        USERCTL=no
+      tags:
+        - bond
+
+    - name: bond eth2
+      shell: |
+        cat > /etc/sysconfig/network-scripts/ifcfg-eth2 << \EOF
+        DEVICE=eth2
+        ONBOOT=yes
+        BOOTPROTO=none
+        MASTER=bond0
+        SLAVE=yes
+        NM_CONTROLLED=no
+        USERCTL=no
+      tags:
+        - bond
+
+  handlers:
+    - name: netrestart
+      systemd:
+        name: network
+        state: restarted

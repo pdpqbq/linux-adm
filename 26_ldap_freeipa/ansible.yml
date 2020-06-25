@@ -1,0 +1,75 @@
+---
+- name: ipa server
+  hosts: server
+  become: true
+  gather_facts: no
+
+  tasks:
+    - name: NetworkManager dns off
+      copy:
+        dest: /etc/NetworkManager/conf.d/dns.conf
+        content: |
+          [main]
+          dns=none
+    - name: reload NetworkManager
+      command: systemctl restart NetworkManager
+    - name: install ipa server
+      yum:
+        name:
+          - ipa-server
+          - ipa-server-dns
+        state: present
+    - name: set hostname
+      command: hostnamectl set-hostname server.local.lan
+    - name: ipa-server-install unattended
+      shell: |
+        ipa-server-install \
+          --ds-password=DM_PASSWORD \
+          --admin-password=ADMIN_PASSWORD \
+          --domain=local.lan \
+          --realm=LOCAL.LAN \
+          --hostname=server.local.lan \
+          --setup-dns \
+          --mkhomedir \
+          --auto-reverse \
+          --forwarder=8.8.8.8 \
+          -U && \
+          service sshd restart && \
+          echo ADMIN_PASSWORD | kinit admin
+
+- name: ipa client
+  hosts: client
+  become: true
+  gather_facts: no
+
+  tasks:
+    - name: NetworkManager dns off
+      copy:
+        dest: /etc/NetworkManager/conf.d/dns.conf
+        content: |
+          [main]
+          dns=none
+    - name: reload NetworkManager
+      command: systemctl restart NetworkManager
+    - name: install ipa client
+      yum:
+        name: ipa-client
+        state: present
+    - name: set hostname
+      command: hostnamectl set-hostname client.local.lan
+    - name: set nameserver
+      copy:
+        dest: /etc/resolv.conf
+        content: |
+          nameserver 192.168.33.10
+    - name: ipa-client-install unattended
+      shell: |
+        ipa-client-install \
+          --principal=admin \
+          --password=ADMIN_PASSWORD \
+          --hostname=client.local.lan \
+          --mkhomedir \
+          --server=server.local.lan \
+          --domain=local.lan \
+          --realm=LOCAL.LAN \
+          -U

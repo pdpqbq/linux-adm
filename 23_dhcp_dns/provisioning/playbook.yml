@@ -1,0 +1,84 @@
+---
+- hosts: all
+  become: yes
+  gather_facts: no
+  tasks:
+  - name: install packages
+    yum: name={{ item }} state=latest
+    with_items:
+      - bind
+      - bind-utils
+      - ntp
+      - nano
+  - name: copy transferkey to all servers and the client
+    copy: src=named.zonetransfer.key dest=/etc/named.zonetransfer.key owner=root group=named mode=0644
+  - name: NetworkManager dns off
+    copy:
+      dest: /etc/NetworkManager/conf.d/dns.conf
+      content: |
+        [main]
+        dns=none
+  - name: reload NetworkManager
+    command: systemctl restart NetworkManager
+
+- hosts: ns01
+  become: yes
+  gather_facts: no
+  tasks:
+  - name: copy named.conf
+    copy: src=master-named.conf.split dest=/etc/named.conf owner=root group=named mode=0640
+  - name: copy zones
+    copy: src={{ item }} dest=/var/named/zones/ owner=root group=named mode=0660
+    with_fileglob:
+      - named.d*
+      - named.newdns.lab
+  - name: copy resolv.conf to the servers
+    copy: src=servers-resolv.conf dest=/etc/resolv.conf owner=root group=root mode=0644
+  - name: set /etc/named permissions
+    file: path=/etc/named owner=root group=named mode=0670
+  - name: ensure named is running and enabled
+    service: name=named state=restarted enabled=yes
+
+- hosts: ns02
+  become: yes
+  gather_facts: no
+  tasks:
+  - name: copy named.conf
+    copy: src=slave-named.conf.split dest=/etc/named.conf owner=root group=named mode=0640
+  - name: copy resolv.conf to the servers
+    copy: src=servers-resolv.conf dest=/etc/resolv.conf owner=root group=root mode=0644
+  - name: set /etc/named permissions
+    file: path=/etc/named owner=root group=named mode=0670
+  - name: create zones dir and set permissions
+    file:
+      path: /var/named/zones
+      state: directory
+      owner: root
+      group: named
+      mode: '0670'
+  - name: flush zones
+    command: rm -rf /var/named/zones/*
+  - name: ensure named is running and enabled
+    service: name=named state=restarted enabled=yes
+
+- hosts: client1
+  become: yes
+  gather_facts: no
+  tasks:
+  - name: copy resolv.conf to the client
+    copy: src=client-resolv.conf dest=/etc/resolv.conf owner=root group=root mode=0644
+  - name: copy rndc conf file
+    copy: src=rndc.conf dest=/home/vagrant/rndc.conf owner=vagrant group=vagrant mode=0644
+  - name: copy motd to the client
+    copy: src=client-motd dest=/etc/motd owner=root group=root mode=0644
+
+- hosts: client2
+  become: yes
+  gather_facts: no
+  tasks:
+  - name: copy resolv.conf to the client
+    copy: src=client-resolv.conf dest=/etc/resolv.conf owner=root group=root mode=0644
+  - name: copy rndc conf file
+    copy: src=rndc.conf dest=/home/vagrant/rndc.conf owner=vagrant group=vagrant mode=0644
+  - name: copy motd to the client
+    copy: src=client-motd dest=/etc/motd owner=root group=root mode=0644

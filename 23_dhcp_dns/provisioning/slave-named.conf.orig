@@ -1,0 +1,89 @@
+options {
+
+    // network
+	  listen-on port 53 { 192.168.50.12; 127.0.0.1; };
+	  listen-on-v6 port 53 { ::1; };
+
+    // data
+  	directory 	"/var/named";
+  	dump-file 	"/var/named/data/cache_dump.db";
+  	statistics-file "/var/named/data/named_stats.txt";
+  	memstatistics-file "/var/named/data/named_mem_stats.txt";
+
+    // server
+  	recursion yes;
+  	allow-query    { any; };
+    allow-transfer { any; };
+    notify no;
+
+    // dnssec
+  	dnssec-enable yes;
+  	dnssec-validation yes;
+
+    // others
+  	bindkeys-file "/etc/named.iscdlv.key";
+  	managed-keys-directory "/var/named/dynamic";
+  	pid-file "/run/named/named.pid";
+  	session-keyfile "/run/named/session.key";
+};
+
+logging {
+    channel bind.log {
+        file "/var/named/bind.log" versions 10 size 20m;
+        //severity debug;
+        print-category yes;
+        print-severity yes;
+        print-time yes;
+    };
+
+      	category queries { bind.log; };
+        category default { bind.log; };
+        category config { bind.log; };
+};
+
+// RNDC Control for client
+key "rndc-key" {
+    algorithm hmac-md5;
+    secret "GrtiE9kz16GK+OKKU/qJvQ==";
+};
+controls {
+    inet 192.168.50.12 allow { 192.168.50.91; } keys { "rndc-key"; };
+};
+
+// ZONE TRANSFER WITH TSIG
+include "/etc/named.zonetransfer.key";
+server 192.168.50.11 {
+    keys { "zonetransfer.key"; };
+};
+
+// root zone
+zone "." IN {
+    type hint;
+    file "named.ca";
+};
+
+// zones like localhost
+include "/etc/named.rfc1912.zones";
+// root's DNSKEY
+include "/etc/named.root.key";
+
+// lab's zone
+zone "dns.lab" {
+    type slave;
+    masters { 192.168.50.11; };
+    file "/var/named/zones/named.dns.lab";
+};
+
+// lab's zone reverse
+zone "50.168.192.in-addr.arpa" {
+    type slave;
+    masters { 192.168.50.11; };
+    file "/var/named/zones/named.dns.lab.rev";
+};
+
+// lab's ddns zone
+zone "ddns.lab" {
+    type slave;
+    masters { 192.168.50.11; };
+    file "/var/named/zones/named.ddns.lab";
+};

@@ -1,0 +1,25 @@
+---
+- hosts: all
+  become: yes
+  gather_facts: no
+  tasks:
+  - name: install epel-release
+    yum:
+      name:
+        epel-release
+      state: present
+  - name: install nginx, nano, mc, utils
+    yum:
+      name:
+        - nginx
+        - nano
+        - mc
+        - policycoreutils-python
+        - setroubleshoot-server
+      state: present
+    notify: enable nginx
+  handlers:
+    - name: enable nginx
+      systemd:
+        name: nginx
+        enabled: yes

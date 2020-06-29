@@ -1,0 +1,10 @@
+Vagrant.configure("2") do |config|
+  config.vm.synced_folder ".", "/vagrant", disabled: true
+
+  config.vm.define "nginx" do |nginx|
+    nginx.vm.box = "centos/7"
+    nginx.vm.hostname = "nginx"
+    nginx.vm.provision "ansible", playbook: "ansible.yml"
+  end
+
+end

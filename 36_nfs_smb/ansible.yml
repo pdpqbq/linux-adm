@@ -1,0 +1,83 @@
+---
+- name: nfs server
+  hosts: server
+  become: true
+  gather_facts: no
+
+  tasks:
+    - name: create shared folder
+      shell: |
+        # create shared folder
+        mkdir /var/share
+        mkdir /var/share/upload
+        chmod 777 /var/share/upload
+    - name: setup nfs static ports
+      shell: |
+        # setup nfs static ports
+        sed -i 's/#LOCKD_TCPPORT=32803/LOCKD_TCPPORT=32803/' /etc/sysconfig/nfs
+        sed -i 's/#LOCKD_UDPPORT=32769/LOCKD_UDPPORT=32769/' /etc/sysconfig/nfs
+        sed -i 's/#MOUNTD_PORT=892/MOUNTD_PORT=892/' /etc/sysconfig/nfs
+        sed -i 's/#STATD_PORT=662/STATD_PORT=662/' /etc/sysconfig/nfs
+        sed -i 's/#STATD_OUTGOING_PORT=2020/STATD_OUTGOING_PORT=2020/' /etc/sysconfig/nfs
+        sed -i 's/RPCNFSDARGS=""/RPCNFSDARGS="--no-tcp -N 2 -N 4 -V 3"/' /etc/sysconfig/nfs
+
+
+
+    - name: setup firewall
+      shell: |
+        #setup firewall
+        systemctl enable --now firewalld
+        firewall-cmd --zone=public --remove-interface=eth1
+        firewall-cmd --zone=internal --add-interface=eth1
+        firewall-cmd --zone=internal --remove-service=dhcpv6-client
+        firewall-cmd --zone=internal --remove-service=mdns
+        firewall-cmd --zone=internal --remove-service=samba-client
+        #firewall-cmd --zone=internal --add-port=111/tcp
+        firewall-cmd --zone=internal --add-port=111/udp
+        #firewall-cmd --zone=internal --add-port=2049/tcp
+        firewall-cmd --zone=internal --add-port=2049/udp
+        #firewall-cmd --zone=internal --add-port=32803/tcp
+        firewall-cmd --zone=internal --add-port=32769/udp
+        #firewall-cmd --zone=internal --add-port=892/tcp
+        firewall-cmd --zone=internal --add-port=892/udp
+        #firewall-cmd --zone=internal --add-port=662/tcp
+        firewall-cmd --zone=internal --add-port=662/udp
+        firewall-cmd --runtime-to-permanent
+        firewall-cmd --reload
+    - name: edit /etc/exports
+      blockinfile:
+        path: /etc/exports
+        block: |
+          /var/share 192.168.33.0/24(rw,sync,root_squash)
+    #- name: enable nfs shares
+    #  command: exportfs -a
+    - name: start nfs service
+      systemd:
+        name: nfs-server
+        enabled: yes
+        state: restarted
+
+- name: nfs client
+  hosts: client
+  become: true
+  gather_facts: no
+
+  tasks:
+    - name: setup firewall
+      shell: |
+        #setup firewall
+        systemctl enable --now firewalld
+        firewall-cmd --zone=public --remove-interface=eth1
+        firewall-cmd --zone=internal --add-interface=eth1
+        firewall-cmd --runtime-to-permanent
+        firewall-cmd --reload
+    - name: create mount point
+      shell: |
+        mkdir /mnt/nfs_share
+    - name: edit fstab
+      blockinfile:
+        path: /etc/fstab
+        block:
+          192.168.33.10:/var/share /mnt/nfs_share nfs udp,rw
+    - name: mount
+      command: mount -a

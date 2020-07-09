@@ -239,5 +239,7 @@ Server master:
 $ barman switch-wal --force master'
 ```
 https://www.percona.com/blog/2019/10/11/how-to-set-up-streaming-replication-in-postgresql-12/
+
 https://www.percona.com/blog/2018/11/30/postgresql-streaming-physical-replication-with-slots/
+
 https://severalnines.com/blog/using-barman-backup-postgresql-overview

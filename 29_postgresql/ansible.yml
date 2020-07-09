@@ -1,0 +1,114 @@
+---
+- name: postgresql
+  hosts: all
+  become: yes
+  gather_facts: no
+
+  tasks:
+    - name: install repos
+      yum:
+        name:
+          # pg
+          - https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+          # pgadmin
+          - https://ftp.postgresql.org/pub/pgadmin/pgadmin4/yum/pgadmin4-redhat-repo-1-1.noarch.rpm
+          # semanage, barman
+          - epel-release
+        state: present
+    - name: install pg12 pgadmin4
+      yum:
+        name:
+          - postgresql12-server
+          - pgadmin4-web
+        state: present
+    - name: install utils
+      yum:
+        name:
+          #- mc
+          #- nano
+          - policycoreutils-python # need semanage for pgadmin setup
+          - expect
+        state: present
+    - name: init db & start pg
+      shell: |
+        /usr/pgsql-12/bin/postgresql-12-setup initdb
+        systemctl enable --now postgresql-12
+    - name: create answer file for pgadmin setup
+      copy:
+        src: provision/pgadmin.exp
+        dest: /tmp/pgadmin.exp
+        mode: '700'
+    - name: setup pgadmin
+      command: /tmp/pgadmin.exp
+
+- name: setup master
+  hosts: master
+  gather_facts: no
+  become: yes
+
+  tasks:
+    - name: pg_hba.conf
+      copy:
+        src: provision/pg_hba.conf.master
+        dest: /var/lib/pgsql/12/data/pg_hba.conf
+        owner: postgres
+        group: postgres
+        mode: '600'
+    - name: create initial sql setup file
+      copy:
+        src: provision/master.sql
+        dest: /tmp/master.sql
+        mode: o+r
+    - name: run initial sql setup file
+      command: su -l postgres -c "psql -a -f /tmp/master.sql"
+    - name: restart pg
+      systemd:
+        name: postgresql-12
+        state: restarted
+
+- name: setup standby
+  hosts: standby
+  gather_facts: no
+  become: yes
+  vars:
+    pgdata: /var/lib/pgsql/12/data
+
+  tasks:
+    - name: install barman
+      yum:
+        name: barman
+        state: present
+    - name: create .pgpass for replicator
+      copy:
+        dest: /var/lib/pgsql/.pgpass
+        content: |
+          192.168.33.10:5432:*:replicator:postgres
+        owner: postgres
+        group: postgres
+        mode: 0600
+    - name: create .pgpass for barman
+      copy:
+        dest: /var/lib/barman/.pgpass
+        content: |
+          192.168.33.10:5432:postgres:barman:barman
+          192.168.33.10:5432:*:streaming_barman:barman
+        owner: barman
+        group: barman
+        mode: 0600
+    - name: create config for barman
+      copy:
+        src: provision/master.conf
+        dest: /etc/barman.d/master.conf
+    - name: backup data from master via slot1
+      shell: |
+        systemctl stop postgresql-12
+        rm -rf {{ pgdata }}/*
+        su -l postgres -c "pg_basebackup -h 192.168.33.10 -U replicator -p 5432 -D {{ pgdata }} -Fp -Xs -P -R -S slot1"
+        systemctl start postgresql-12 # parameter "listen_addresses" cannot be changed without restarting the server
+    - name: switch wal
+      shell: |
+        barman switch-wal --force master
+    - name: create cron job for barman
+      shell: |
+        (crontab -l; echo "* * * * * /usr/bin/barman cron") | crontab
+        (crontab -l; echo "*/3 * * * * /usr/bin/barman backup master --wait") | crontab

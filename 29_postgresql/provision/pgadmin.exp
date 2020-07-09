@@ -1,0 +1,21 @@
+#!/usr/bin/expect -f
+set timeout -1
+spawn /usr/pgadmin4/bin/setup-web.sh
+expect {
+  "Email address:" {
+    send -- "no@mail.org\r"
+    exp_continue
+  }
+  "Password:" {
+    send -- "postgres\r"
+    exp_continue
+  }
+  "Retype password:" {
+    send -- "postgres\r"
+    exp_continue
+  }
+  "Continue (y/n)?" {
+    send -- "y\r"
+    exp_continue
+  }
+}

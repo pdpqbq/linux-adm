@@ -1,0 +1,3 @@
+listen_addresses = '*'
+primary_conninfo = 'user=replicator password=postgres host=192.168.33.10 port=5432 sslmode=prefer sslcompression=0 gssencmode=prefer krbsrvname=postgres target_session_attrs=any'
+primary_slot_name = 'slot1'

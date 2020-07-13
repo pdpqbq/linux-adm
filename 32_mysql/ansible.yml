@@ -1,0 +1,55 @@
+---
+- name: mysql
+  hosts: all
+  become: yes
+  gather_facts: no
+
+  tasks:
+    - name: install repos
+      yum:
+        name:
+          # percona
+          - https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+        state: present
+    - name: install percona
+      yum:
+        name:
+          - Percona-Server-server-57
+        state: present
+
+- name: setup master
+  hosts: master
+  become: yes
+  gather_facts: no
+
+  tasks:
+    - name: copy configs
+      copy:
+        src: conf/master/
+        dest: /etc/my.cnf.d/
+    - name: start mysql
+      command: systemctl start mysql
+    - name: mount share
+      shell: |
+        mkdir /mnt/nfs_share
+        echo "192.168.11.151:/tmp /mnt/nfs_share nfs udp,rw" >> /etc/fstab
+
+- name: setup slave
+  hosts: slave
+  become: yes
+  gather_facts: no
+
+  tasks:
+    - name: copy configs
+      copy:
+        src: conf/slave/
+        dest: /etc/my.cnf.d/
+    - name: start mysql
+      command: systemctl start mysql
+    - name: create nfs share
+      copy:
+        dest: /etc/exports
+        content: |
+          /tmp 192.168.11.0/24(rw,sync,root_squash)
+    - name: restart nfs server
+      command: systemctl restart nfs-server

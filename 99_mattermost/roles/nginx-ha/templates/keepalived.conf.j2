@@ -1,0 +1,32 @@
+global_defs {
+#  enable_script_security
+}
+# Script used to check if Proxy is running
+vrrp_script check_nginx {
+  script "/usr/sbin/pidof nginx"
+  interval 3
+#  fall 3
+#  rise 3
+#  weight 20
+}
+# Virtual interface
+# The priority specifies the order in which the assigned interface to take over in a failover
+vrrp_instance VI_2 {
+  state {{ state }}
+  interface eth1
+  virtual_router_id 22
+  priority {{ priority }}
+  nopreempt
+  advert_int 3
+#  authentication {
+#      auth_type PASS
+#      auth_pass 2222
+#  }
+  # The virtual ip address shared between the two loadbalancers
+  virtual_ipaddress {
+    192.168.100.10 dev eth1
+  }
+  track_script {
+    check_nginx
+  }
+}

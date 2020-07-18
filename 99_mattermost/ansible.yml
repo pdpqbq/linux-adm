@@ -1,0 +1,28 @@
+---
+- name: Percona XtraDB Cluster
+  hosts: pxc1 pxc2 pxc3
+  gather_facts: yes
+  become: yes
+  roles:
+    - xtradb-cluster
+
+- name: ProxySQL + keepalived
+  hosts: sqlp1 sqlp2
+  gather_facts: yes
+  become: yes
+  roles:
+    - proxysql
+
+- name: Nginx
+  hosts: ngx1 ngx2
+  become: yes
+  gather_facts: yes
+  roles:
+    - nginx-ha
+
+- name: Mattermost
+  hosts: app1 app2
+  become: yes
+  gather_facts: yes
+  roles:
+    - mattermost-app

@@ -1,0 +1,94 @@
+---
+# tasks file for roles/xtradb-cluster
+
+- name: disable selinux
+  selinux: state=disabled
+
+- name: install percona repo
+  yum:
+    name: https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+    state: present
+
+- name: configure percona repo for pxc-80
+  shell: |
+    percona-release enable-only pxc-80 release
+    percona-release enable tools release
+
+- name: install percona packages
+  yum:
+    name: percona-xtradb-cluster
+    state: present
+
+- name: start mysql
+  systemd: name=mysql state=started
+
+- name: get temporary mysql password
+  command: awk '$0 ~ "temporary password" {print $13}' /var/log/mysqld.log
+  register: temp_sql_password
+
+- name: temporary mysql password
+  debug: msg="{{ temp_sql_password.stdout }}"
+
+- name: copy .my.cnf file with root password credentials
+  template:
+    src: .my.cnf.j2
+    dest: /root/.my.cnf
+    owner: root
+    group: root
+    mode: 0600
+
+- name: set root mysql password
+  shell: mysql -u root --password="{{ temp_sql_password.stdout }}" -NBe 'ALTER USER "root"@"localhost" IDENTIFIED WITH mysql_native_password BY "{{ mysql_root_password }}";' --connect-expired-password
+
+- name: stop mysql
+  systemd: name=mysql state=stopped
+
+- name: put my.cnf in /etc
+  template:
+    src: my.cnf.j2
+    dest: /etc/my.cnf
+    owner: root
+    group: root
+    mode: 0644
+
+- name: put ssl certificates in /var/lib/mysql
+  copy:
+    src: files/pxc-certs/
+    dest: /var/lib/mysql
+
+- name: "bootstrap node #1"
+  systemd:
+    name: mysql@bootstrap.service
+    state: started
+  register: bootstrap_ok
+  when: inventory_hostname == "pxc1"
+
+- name: "start node #2"
+  systemd:
+    name: mysql
+    state: started
+  when: inventory_hostname == "pxc2" #and bootstrap_ok.changed == True
+
+- name: "start node #3"
+  systemd:
+    name: mysql
+    state: started
+  when: inventory_hostname == "pxc3" #and bootstrap_ok.changed == True
+
+- name: create database, user and grant privileges for mattermost
+  shell: mysql -u root --password="{{ mysql_root_password }}" -NBe "{{ item }}"
+  with_items:
+    - "create user 'mmuser'@'%' identified by '{{ mmuser_password }}';"
+    - "create database mattermost;"
+    - "grant all privileges on mattermost.* to 'mmuser'@'%';"
+  when: inventory_hostname == "pxc1"
+
+- name: create user and grant privileges for proxysql
+  shell: mysql -u root --password="{{ mysql_root_password }}" -NBe "{{ item }}"
+  with_items:
+    - "CREATE USER 'proxysql'@'%' IDENTIFIED WITH mysql_native_password by '{{ proxysql_password }}';"
+    - "GRANT USAGE ON *.* TO 'proxysql'@'%';"
+    - "CREATE USER 'sbuser'@'192.168.100.104' IDENTIFIED BY '{{ sbuser_password }}';"
+    - "CREATE USER 'sbuser'@'192.168.100.105' IDENTIFIED BY '{{ sbuser_password }}';"
+    - "GRANT ALL ON *.* TO 'sbuser'@'192.168.100.104', 'sbuser'@'192.168.100.105';"
+  when: inventory_hostname == "pxc1"

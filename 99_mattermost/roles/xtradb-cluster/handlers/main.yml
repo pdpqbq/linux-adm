@@ -1,0 +1,7 @@
+---
+# handlers file for roles/xtradb-cluster
+
+- name: start mysql
+  systemd: name=mysql state=started enabled=yes
+- name: stop mysql
+  systemd: name=mysql state=stopped enabled=yes

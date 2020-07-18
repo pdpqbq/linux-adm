@@ -1,0 +1,84 @@
+# -*- mode: ruby -*-
+# vim: set ft=ruby :
+
+MACHINES = {
+  :ngx1 => {
+        :box_name => "centos/7",
+        :net => [
+                  {ip: '192.168.100.11', adapter: 2, netmask: "255.255.255.0"}
+                ]
+  },
+  :ngx2 => {
+        :box_name => "centos/7",
+        :net => [
+                  {ip: '192.168.100.12', adapter: 2, netmask: "255.255.255.0"}
+                ]
+  },
+  :pxc1 => {
+        :box_name => "centos/7",
+        :net => [
+                  {ip: '192.168.100.101', adapter: 2, netmask: "255.255.255.0"}
+                ]
+  },
+  :pxc2 => {
+        :box_name => "centos/7",
+        :net => [
+                  {ip: '192.168.100.102', adapter: 2, netmask: "255.255.255.0"}
+                ]
+  },
+  :pxc3 => {
+        :box_name => "centos/7",
+        :net => [
+                  {ip: '192.168.100.103', adapter: 2, netmask: "255.255.255.0"}
+                ]
+  },
+  :sqlp1 => {
+        :box_name => "centos/7",
+        :net => [
+                  {ip: '192.168.100.104', adapter: 2, netmask: "255.255.255.0"}
+                ]
+  },
+  :sqlp2 => {
+        :box_name => "centos/7",
+        :net => [
+                  {ip: '192.168.100.105', adapter: 2, netmask: "255.255.255.0"}
+                ]
+  },
+  :app1 => {
+        :box_name => "centos/7",
+        #:public => {:ip => '10.10.10.1', :adapter => 1},
+        :net => [
+                  {ip: '192.168.100.91', adapter: 2, netmask: "255.255.255.0"}
+                ]
+  },
+  :app2 => {
+        :box_name => "centos/7",
+        :net => [
+                  {ip: '192.168.100.92', adapter: 2, netmask: "255.255.255.0"}
+                ]
+  }
+}
+
+Vagrant.configure("2") do |config|
+
+  MACHINES.each do |boxname, boxconfig|
+
+    config.vbguest.auto_update = false
+
+    config.vm.define boxname do |box|
+
+      box.vm.box = boxconfig[:box_name]
+      box.vm.host_name = boxname.to_s
+
+      boxconfig[:net].each do |ipconf|
+        box.vm.network "private_network", ipconf
+      end
+
+      if boxconfig.key?(:public)
+        box.vm.network "public_network", boxconfig[:public]
+      end
+
+      box.vm.provision "ansible", playbook: "ansible.yml"#, verbose: "v"
+    end
+  end
+end

@@ -1,0 +1,14 @@
+# passwords
+mysql_root_password: rwyE8lHKzI19kZwf
+mmuser_password: QoEAPWWeqPG30yPi
+proxysql_password: 6oWCJYNavc70xzp5
+sbuser_password: 89nnQZRwgETMIq7t
+
+# /etc/my.cnf xdb
+wsrep_cluster_address: gcomm://192.168.100.101,192.168.100.102,192.168.100.103
+
+# full path to mm distro
+mm_latest: https://releases.mattermost.com/5.25.0/mattermost-5.25.0-linux-amd64.tar.gz
+
+# site url
+site_url: http://mm.otus.local

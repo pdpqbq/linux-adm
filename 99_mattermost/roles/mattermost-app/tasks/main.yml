@@ -1,25 +1,39 @@
 ---
 # tasks file for roles/mattermost-app
 
-- name: intall cheese-release repo for keepalived
-  yum:
-    name: http://www.nosuchhost.net/~cheese/fedora/packages/epel-7/x86_64/cheese-release-7-1.noarch.rpm
-    state: present
-
-- name: install keepalived
-  yum: name=keepalived state=latest
-
 - name: get wget
   yum: name=wget state=present
 
+- name: install elastic repo
+  include_role:
+    name: common
+    tasks_from: repo_elastic.yml
+
+- name: install filebeat
+  yum: name=filebeat state=present
+
+- name: configure filebeat
+  copy:
+    src: filebeat.yml
+    dest: /etc/filebeat/filebeat.yml
+
+- name: start filebeat
+  systemd: name=filebeat state=started
+
+- name: include tasks for keepalived
+  include_role:
+    name: common
+    tasks_from: setup_keepalived.yml
+
+- name: include tasks for node_exporter
+  include_role:
+    name: common
+    tasks_from: node_exporter.yml
+
 - name: install selinux tools
   yum:
-    name: "{{ item }}"
+    name: ['checkpolicy', 'policycoreutils-python', 'policycoreutils']
     state: present
-  with_items:
-    - checkpolicy
-    - policycoreutils-python
-    - policycoreutils
 
 - name: update selinux policies
   yum:
@@ -44,7 +58,7 @@
   shell: |
     cd /tmp
     wget {{ mm_latest }}
-    tar -xvzf `basename {{ mm_latest }}`
+    tar xzf `basename {{ mm_latest }}`
     mv mattermost /opt
     mkdir /opt/mattermost/data
     useradd --system --user-group mattermost
@@ -79,6 +93,7 @@
     dest: /opt/mattermost/config/config.json
     owner: mattermost
     group: mattermost
+    mode: 0600
 
 - name: create keepalived config
   template:

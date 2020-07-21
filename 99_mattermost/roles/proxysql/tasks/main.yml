@@ -6,6 +6,14 @@
     name: https://repo.percona.com/yum/percona-release-latest.noarch.rpm
     state: present
 
+- name: install elastic repo
+  include_role:
+    name: common
+    tasks_from: repo_elastic.yml
+
+- name: install filebeat
+  yum: name=filebeat state=present
+
 - name: configure percona repo for pxc-80
   shell: |
     percona-release enable-only pxc-80 release
@@ -16,11 +24,21 @@
     name:
       - percona-xtradb-cluster-client
       - proxysql2
-      - keepalived
-      #- psmisc # killall for keepalived
-      #- /usr/bin/audit2allow
     state: present
-    
+
+- name: configure filebeat
+  copy:
+    src: filebeat.yml
+    dest: /etc/filebeat/filebeat.yml
+
+- name: start filebeat
+  systemd: name=filebeat state=started enabled=yes
+
+- name: include tasks for keepalived
+  include_role:
+    name: common
+    tasks_from: setup_keepalived.yml
+
 - name: update selinux policies
   yum:
     name:
@@ -52,25 +70,10 @@
 - name: start keepalived
   systemd: name=keepalived state=restarted enabled=yes
 
-  #groupadd -r keepalived_script
-  #useradd -r -s /sbin/nologin -g keepalived_script -M keepalived_script
+- name: include tasks for node_exporter
+  include_role:
+    name: common
+    tasks_from: node_exporter.yml
 
-- name: connect proxysql to percona cluster
-  shell: mysql -u admin -padmin -h 127.0.0.1 -P 6032 -NBe "{{ item }}"
-  with_items:
-    - "INSERT INTO mysql_servers(hostgroup_id, hostname, port) VALUES (0,'192.168.100.101',3306);"
-    - "INSERT INTO mysql_servers(hostgroup_id, hostname, port) VALUES (0,'192.168.100.102',3306);"
-    - "INSERT INTO mysql_servers(hostgroup_id, hostname, port) VALUES (0,'192.168.100.103',3306);"
-
-    - "UPDATE global_variables SET variable_value='proxysql' WHERE variable_name='mysql-monitor_username';"
-    - "UPDATE global_variables SET variable_value='kdDL168tyugc' WHERE variable_name='mysql-monitor_password';"
-
-    - "INSERT INTO mysql_users (username,password) VALUES ('sbuser','{{ sbuser_password }}');"
-    - "INSERT INTO mysql_users(username, password, default_hostgroup) VALUES ('mmuser','{{ mmuser_password }}',0);"
-
-    - "LOAD MYSQL VARIABLES TO RUNTIME;"
-    - "SAVE MYSQL VARIABLES TO DISK;"
-    - "LOAD MYSQL SERVERS TO RUNTIME;"
-    - "SAVE MYSQL SERVERS TO DISK;"
-    - "LOAD MYSQL USERS TO RUNTIME;"
-    - "SAVE MYSQL USERS TO DISK;"
+- name: include sql commands
+  include: sqlp_sql_commands.yml

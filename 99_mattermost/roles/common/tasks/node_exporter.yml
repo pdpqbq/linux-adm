@@ -1,0 +1,33 @@
+- name: get wget
+  yum: name=wget state=present
+
+- name: install node_exporter {{ node_exporter_latest.split("/")[-2] }}
+  shell: |
+    cd /tmp
+    wget {{ node_exporter_latest }}
+    tar xf `basename {{ node_exporter_latest }}`
+    mkdir -p /var/lib/prometheus/node_exporter
+    mv `basename {{ node_exporter_latest.rstrip('.tar.gz') }}`/* /var/lib/prometheus/node_exporter/
+    useradd --no-create-home -s /bin/false prometheus
+    chown -R prometheus:prometheus /var/lib/prometheus/node_exporter/
+    rm -f `basename {{ node_exporter_latest }}`
+
+- name: create systemd unit for node_exporter
+  blockinfile:
+    path: /etc/systemd/system/node_exporter.service
+    block: |
+      [Unit]
+      Description=Node Exporter
+      Wants=network-online.target
+      After=network-online.target
+
+      [Service]
+      User=prometheus
+      ExecStart=/var/lib/prometheus/node_exporter/node_exporter
+
+      [Install]
+      WantedBy=multi-user.target
+    create: yes
+
+- name: start node_exporter
+  systemd: name=node_exporter.service state=started enabled=yes

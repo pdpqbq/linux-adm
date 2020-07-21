@@ -9,14 +9,31 @@
     name: https://repo.percona.com/yum/percona-release-latest.noarch.rpm
     state: present
 
+- name: install elastic repo
+  include_role:
+    name: common
+    tasks_from: repo_elastic.yml
+
+- name: install filebeat
+  yum: name=filebeat state=present
+
+- name: configure filebeat
+  copy:
+    src: filebeat.yml
+    dest: /etc/filebeat/filebeat.yml
+
+- name: start filebeat
+  systemd: name=filebeat state=started enabled=yes
+
 - name: configure percona repo for pxc-80
   shell: |
     percona-release enable-only pxc-80 release
     percona-release enable tools release
 
-- name: install percona packages
+- name: install percona-xtradb-cluster
   yum:
-    name: percona-xtradb-cluster
+    name:
+      - percona-xtradb-cluster
     state: present
 
 - name: start mysql
@@ -56,39 +73,38 @@
     src: files/pxc-certs/
     dest: /var/lib/mysql
 
+# for testing
+- name: edit grastate.dat
+  shell: |
+    sed -i 's/safe_to_bootstrap: 0/safe_to_bootstrap: 1/' /var/lib/mysql/grastate.dat
+  when: inventory_hostname == "pxc1"
+
 - name: "bootstrap node #1"
   systemd:
     name: mysql@bootstrap.service
     state: started
-  register: bootstrap_ok
   when: inventory_hostname == "pxc1"
 
 - name: "start node #2"
   systemd:
     name: mysql
     state: started
-  when: inventory_hostname == "pxc2" #and bootstrap_ok.changed == True
+  when: inventory_hostname == "pxc2"
 
 - name: "start node #3"
   systemd:
     name: mysql
     state: started
-  when: inventory_hostname == "pxc3" #and bootstrap_ok.changed == True
+  when: inventory_hostname == "pxc3"
 
-- name: create database, user and grant privileges for mattermost
-  shell: mysql -u root --password="{{ mysql_root_password }}" -NBe "{{ item }}"
-  with_items:
-    - "create user 'mmuser'@'%' identified by '{{ mmuser_password }}';"
-    - "create database mattermost;"
-    - "grant all privileges on mattermost.* to 'mmuser'@'%';"
-  when: inventory_hostname == "pxc1"
+- name: include tasks for node_exporter
+  include_role:
+    name: common
+    tasks_from: node_exporter.yml
 
-- name: create user and grant privileges for proxysql
-  shell: mysql -u root --password="{{ mysql_root_password }}" -NBe "{{ item }}"
-  with_items:
-    - "CREATE USER 'proxysql'@'%' IDENTIFIED WITH mysql_native_password by '{{ proxysql_password }}';"
-    - "GRANT USAGE ON *.* TO 'proxysql'@'%';"
-    - "CREATE USER 'sbuser'@'192.168.100.104' IDENTIFIED BY '{{ sbuser_password }}';"
-    - "CREATE USER 'sbuser'@'192.168.100.105' IDENTIFIED BY '{{ sbuser_password }}';"
-    - "GRANT ALL ON *.* TO 'sbuser'@'192.168.100.104', 'sbuser'@'192.168.100.105';"
-  when: inventory_hostname == "pxc1"
+- name: include sql commands
+  include: pxc_sql_commands.yml
+
+- name: include pmm2 client setup
+  include: pmm2_client.yml
+  when: setup_pmm == true

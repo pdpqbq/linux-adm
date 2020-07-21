@@ -1,0 +1,17 @@
+- name: intall cheese-release repo for keepalived
+  yum:
+    name: http://www.nosuchhost.net/~cheese/fedora/packages/epel-7/x86_64/cheese-release-7-1.noarch.rpm
+    state: present
+
+- name: install keepalived
+  yum: name=keepalived state=latest
+
+- name: config rsyslogd for keepalived
+  blockinfile:
+    path: /etc/rsyslog.d/10-keepalived.conf
+    block: |
+      if $programname contains 'Keepalived' then /var/log/keepalived.log
+      if $programname contains 'Keepalived' then stop
+    create: yes
+
+- systemd: name=rsyslog state=restarted

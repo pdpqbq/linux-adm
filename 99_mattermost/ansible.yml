@@ -13,16 +13,124 @@
   roles:
     - proxysql
 
-- name: Nginx
+- name: Nginx + keepalived
   hosts: ngx1 ngx2
-  become: yes
   gather_facts: yes
+  become: yes
   roles:
     - nginx-ha
 
-- name: Mattermost
+- name: Mattermost + keepalived
   hosts: app1 app2
-  become: yes
   gather_facts: yes
+  become: yes
   roles:
     - mattermost-app
+
+- name: Percona Monitoring and Management
+  hosts: adm2
+  gather_facts: yes
+  become: yes
+  roles:
+    - role: pmm-server
+      when: setup_pmm == true
+
+- name: Monitoring + Backup + Logging
+  hosts: adm1
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: get wget
+      yum: name=wget state=present
+
+    - name: install elastic repo
+      include_role:
+        name: common
+        tasks_from: repo_elastic.yml
+
+
+    - name: install logstash
+      yum:
+        name:
+          - java
+          - logstash
+        state: present
+
+    - name: install prometheus {{ prometheus_latest.split("/")[-2] }}
+      shell: |
+        if [ ! -d /var/lib/prometheus/ ]; then
+          cd /tmp
+          wget {{ prometheus_latest }}
+          tar xzf `basename {{ prometheus_latest }}`
+          mkdir /etc/prometheus
+          mkdir /var/lib/prometheus
+          mv `basename {{ prometheus_latest.rstrip('.tar.gz') }}`/* /var/lib/prometheus/
+          mv /var/lib/prometheus/prometheus.yml /etc/prometheus/
+          ln -s /var/lib/prometheus/prometheus /usr/local/bin/prometheus
+          useradd --no-create-home -s /bin/false prometheus
+          chown prometheus:prometheus /etc/prometheus
+          chown -R prometheus:prometheus /var/lib/prometheus
+          rm -f `basename {{ prometheus_latest }}`
+        fi
+
+    - name: create systemd unit for prometheus
+      blockinfile:
+        path: /etc/systemd/system/prometheus.service
+        block: |
+          [Unit]
+          Description=Prometheus
+          Wants=network-online.target
+          After=network-online.target
+
+          [Service]
+          User=prometheus
+          Group=prometheus
+          Type=simple
+          ExecStart=/usr/local/bin/prometheus \
+          --config.file /etc/prometheus/prometheus.yml \
+          --storage.tsdb.path /var/lib/prometheus/ \
+          --web.console.templates=/var/lib/prometheus/consoles \
+          --web.console.libraries=/var/lib/prometheus/console_libraries
+
+          [Install]
+          WantedBy=multi-user.target
+        create: yes
+
+    - name: conf prom
+      blockinfile:
+        path: /etc/prometheus/prometheus.yml
+        block: |2
+            - job_name: 'node_exporter'
+              static_configs:
+                - targets:
+                  - 192.168.100.11:9100
+                  - 192.168.100.12:9100
+                  - 192.168.100.91:9100
+                  - 192.168.100.92:9100
+                  - 192.168.100.101:9100
+                  - 192.168.100.102:9100
+                  - 192.168.100.103:9100
+                  - 192.168.100.104:9100
+                  - 192.168.100.105:9100
+
+    - name: start prometheus
+      systemd: name=prometheus.service state=restarted enabled=yes
+
+    - name: inst grafana
+      yum: name={{ grafana_latest }} state=present
+
+    - name: conf graf
+      shell: |
+        sed -i 's/;protocol = http/protocol = http/' /etc/grafana/grafana.ini
+        sed -i 's/;http_port = 3000/http_port = 3000/' /etc/grafana/grafana.ini
+
+    - name: start graf
+      command: systemctl enable --now grafana-server.service
+
+    - name: create datasource
+      shell: |
+        curl -s --user admin:admin 'http://localhost:3000/api/datasources' -X POST -H 'Content-Type: application/json;charset=UTF-8' --data-binary '{"name":"Prometheus","isDefault":true ,"type":"prometheus","url":"http://localhost:9090","access":"proxy","basicAuth":false}'
+
+    - debug:
+        msg: grafana web-interface login admin:admin on http://{{ ansible_eth1.ipv4.address }}:3000

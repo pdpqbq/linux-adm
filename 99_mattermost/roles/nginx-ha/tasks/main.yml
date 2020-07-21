@@ -1,6 +1,9 @@
 ---
 # tasks file for roles/nginx-ha
 
+- name: get wget
+  yum: name=wget state=present
+
 - name: install epel repo
   yum: name=epel-release state=present
 
@@ -25,11 +28,29 @@
       module_hotfixes=true
     create: yes
 
+- name: install elastic repo
+  include_role:
+    name: common
+    tasks_from: repo_elastic.yml
+
+- name: install filebeat
+  yum: name=filebeat state=present
+
+- name: configure filebeat
+  copy:
+    src: filebeat.yml
+    dest: /etc/filebeat/filebeat.yml
+
+- name: start filebeat
+  systemd: name=filebeat state=started enabled=yes
+
+- name: include tasks for keepalived
+  include_role:
+    name: common
+    tasks_from: setup_keepalived.yml
+
 - name: install nginx
   yum: name=nginx state=latest
-
-- name: install keepalived
-  yum: name=keepalived state=present
 
 - name: update selinux policies
   yum:
@@ -42,8 +63,8 @@
   command: setsebool -P httpd_can_network_connect 1
 
 - name: create nginx config
-  copy:
-    src: files/nginx.conf
+  template:
+    src: nginx.conf.j2
     dest: /etc/nginx/conf.d/mattermost
 
 - name: setup nginx config
@@ -70,6 +91,11 @@
     priority: 90
   when: inventory_hostname == "ngx2"
 
+- name: custom error page
+  copy:
+    src: servicedown.html
+    dest: /usr/share/nginx/html/
+
 - name: start services
   systemd:
     name: "{{ item }}"
@@ -78,3 +104,8 @@
   with_items:
     - nginx
     - keepalived
+
+- name: include tasks for node_exporter
+  include_role:
+    name: common
+    tasks_from: node_exporter.yml

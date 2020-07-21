@@ -1,0 +1,22 @@
+---
+# tasks file for roles/pmm-server
+
+- name: install pmm docker container
+  shell: |
+    yum install -y docker
+    systemctl enable --now docker
+    docker pull percona/pmm-server:2
+    docker create \
+     -v /srv \
+     --name pmm-data \
+     percona/pmm-server:2 /bin/true
+    docker run -d \
+     -p 80:80 \
+     -p 443:443 \
+     --volumes-from pmm-data \
+     --name pmm-server \
+     --restart always \
+     percona/pmm-server:2
+
+- debug:
+    msg: web-interface login admin:admin on http or https://{{ ansible_eth1.ipv4.address }}

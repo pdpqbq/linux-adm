@@ -7,16 +7,16 @@ global_defs {
    vrrp_gna_interval 0.5
 }
 
-vrrp_instance VI_3 {
+vrrp_instance VI_2 {
     state MASTER
     interface eth1
-    virtual_router_id 33
+    virtual_router_id 22
     priority {{ priority }}
     preempt
     advert_int 1
 #    authentication {
 #        auth_type PASS
-#        auth_pass 3333
+#        auth_pass 2222
 #    }
     virtual_ipaddress {
         192.168.100.90

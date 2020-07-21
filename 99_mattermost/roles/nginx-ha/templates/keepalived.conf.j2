@@ -9,22 +9,31 @@ vrrp_script check_nginx {
 #  rise 3
 #  weight 20
 }
-# Virtual interface
-# The priority specifies the order in which the assigned interface to take over in a failover
-vrrp_instance VI_2 {
+
+vrrp_instance VI_3 {
   state {{ state }}
   interface eth1
-  virtual_router_id 22
+  virtual_router_id 33
   priority {{ priority }}
   nopreempt
-  advert_int 3
-#  authentication {
-#      auth_type PASS
-#      auth_pass 2222
-#  }
-  # The virtual ip address shared between the two loadbalancers
+  advert_int 1
   virtual_ipaddress {
     192.168.100.10 dev eth1
+  }
+  track_script {
+    check_nginx
+  }
+}
+
+vrrp_instance VI_4 {
+  state {{ state }}
+  interface eth2
+  virtual_router_id 44
+  priority {{ priority }}
+  nopreempt
+  advert_int 1
+  virtual_ipaddress {
+    192.168.200.10 dev eth2
   }
   track_script {
     check_nginx

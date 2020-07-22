@@ -1,0 +1,8 @@
+- shell: |
+    ss -tlnp | grep LISTEN | awk '{printf "%-30s%s\n",$4,$6}' && \
+    echo && echo "Firewall status: "`firewall-cmd --state` && \
+    echo && ping 8.8.8.8 -c 3 | grep icmp
+  register: ss_out
+
+- debug:
+    msg: "{{ ss_out.stdout.split('\n') }}"

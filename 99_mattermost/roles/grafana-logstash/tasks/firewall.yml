@@ -1,0 +1,21 @@
+- name: setup firewall
+  shell: |
+    systemctl enable --now firewalld
+    rm -rf /etc/firewalld/zones/
+    cp -r /usr/lib/firewalld/zones /etc/firewalld/zones
+    firewall-cmd --reload
+
+    firewall-cmd --zone=public --remove-interface=eth1
+    firewall-cmd --zone=internal --add-interface=eth1
+
+    firewall-cmd --zone=internal --remove-service=dhcpv6-client
+    firewall-cmd --zone=internal --remove-service=mdns
+    firewall-cmd --zone=internal --remove-service=samba-client
+
+    firewall-cmd --zone=internal --add-port=143/tcp
+    firewall-cmd --zone=internal --add-port=3000/tcp
+    firewall-cmd --zone=internal --add-port=5044/tcp
+    firewall-cmd --zone=internal --add-port=9090/tcp
+
+    firewall-cmd --runtime-to-permanent
+    firewall-cmd --reload

@@ -18,17 +18,12 @@
     dest: /etc/filebeat/filebeat.yml
 
 - name: start filebeat
-  systemd: name=filebeat state=started
+  systemd: name=filebeat state=started enabled=yes
 
 - name: include tasks for keepalived
   include_role:
     name: common
     tasks_from: setup_keepalived.yml
-
-- name: include tasks for node_exporter
-  include_role:
-    name: common
-    tasks_from: node_exporter.yml
 
 - name: install selinux tools
   yum:
@@ -56,16 +51,18 @@
 
 - name: install mattermost {{ mm_latest.split("/")[-2] }}
   shell: |
-    cd /tmp
-    wget {{ mm_latest }}
-    tar xzf `basename {{ mm_latest }}`
-    mv mattermost /opt
-    mkdir /opt/mattermost/data
-    useradd --system --user-group mattermost
-    chown -R mattermost:mattermost /opt/mattermost
-    chmod -R g+w /opt/mattermost
-    touch /etc/systemd/system/mattermost.service
-    chmod 664 /etc/systemd/system/mattermost.service
+    if [ ! -d /opt/mattermost ]; then
+      cd /tmp
+      wget {{ mm_latest }}
+      tar xzf `basename {{ mm_latest }}`
+      mv mattermost /opt
+      mkdir /opt/mattermost/data
+      useradd --system --user-group mattermost
+      chown -R mattermost:mattermost /opt/mattermost
+      chmod -R g+w /opt/mattermost
+      touch /etc/systemd/system/mattermost.service
+      chmod 664 /etc/systemd/system/mattermost.service
+    fi
 
 - name: create systemd unit
   blockinfile:
@@ -127,9 +124,24 @@
       - mattermost
       - keepalived
 
+- include_role:
+    name: common
+    tasks_from: node_exporter.yml
+
+- name: setup firewall
+  include: firewall.yml
+
+- include_role:
+    name: common
+    tasks_from: default_gw.yml
+
 - name: check log
   shell: grep listening /opt/mattermost/logs/mattermost.log | tail -n 1 | awk -F"," '{ print $4 }' | sed 's/"msg"://'
   register: mm_log
 
 - name: must be "Server is listening"
   debug: msg="{{ mm_log.stdout }}"
+
+- include_role:
+    name: common
+    tasks_from: open_ports.yml

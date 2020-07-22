@@ -108,7 +108,7 @@ Vagrant.configure("2") do |config|
         box.vm.network "public_network", boxconfig[:public]
       end
 
-      box.vm.provision "ansible", playbook: "ansible.yml"#, verbose: "v"
+      box.vm.provision "ansible", playbook: "ansible.yml"#, verbose: "vvv"
     end
   end
 end

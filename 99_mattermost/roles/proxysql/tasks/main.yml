@@ -70,10 +70,16 @@
 - name: start keepalived
   systemd: name=keepalived state=restarted enabled=yes
 
-- name: include tasks for node_exporter
-  include_role:
+- include_role:
     name: common
     tasks_from: node_exporter.yml
 
+- name: setup firewall
+  include: firewall.yml
+
 - name: include sql commands
   include: sqlp_sql_commands.yml
+
+- include_role:
+    name: common
+    tasks_from: open_ports.yml

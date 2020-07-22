@@ -97,10 +97,12 @@
     state: started
   when: inventory_hostname == "pxc3"
 
-- name: include tasks for node_exporter
-  include_role:
+- include_role:
     name: common
     tasks_from: node_exporter.yml
+
+- name: setup firewall
+  include: firewall.yml
 
 - name: include sql commands
   include: pxc_sql_commands.yml
@@ -108,3 +110,7 @@
 - name: include pmm2 client setup
   include: pmm2_client.yml
   when: setup_pmm == true
+
+- include_role:
+    name: common
+    tasks_from: open_ports.yml

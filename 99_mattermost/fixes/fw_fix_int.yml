@@ -1,0 +1,8 @@
+---
+- name: firewall fix int
+  hosts: all
+  gather_facts: yes
+  become: yes
+
+  tasks:
+  - command: firewall-cmd --change-interface=eth1 --zone=internal --permanent

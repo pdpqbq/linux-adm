@@ -1,0 +1,42 @@
+---
+# tasks file for roles/glusterfs
+
+- name: edit hosts
+  blockinfile:
+    path: /etc/hosts
+    block: |
+      192.168.100.91 app1
+      192.168.100.92 app2
+      192.168.100.93 app3
+
+- name: install glusterfs
+  yum:
+    name:
+      - centos-release-gluster
+      #- glusterfs-client
+    state: present
+
+- name: install glusterfs
+  yum:
+    name:
+      - glusterfs-server
+    state: present
+
+- name: start glusterd
+  systemd: name=glusterd state=started enabled=yes
+
+- name: create brick
+  shell: |
+    mkfs.xfs -i size=512 /dev/sdb
+    mkdir -p /data/brick1
+    echo '/dev/sdb /data/brick1 xfs defaults 1 2' >> /etc/fstab
+    mount -a
+    mkdir -p /data/brick1/gv0
+
+- name: create and mount glusterfs volume
+  shell: |
+    gluster peer probe app2
+    gluster peer probe app3
+
+    gluster volume create gv0 replica 3 app1:/data/brick1/gv0 app2:/data/brick1/gv0 app3:/data/brick1/gv0
+    gluster volume start gv0

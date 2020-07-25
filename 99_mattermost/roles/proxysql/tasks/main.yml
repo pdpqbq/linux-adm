@@ -25,6 +25,7 @@
       - percona-xtradb-cluster-client
       - proxysql2
     state: present
+    disable_gpg_check: yes
 
 - name: configure filebeat
   copy:

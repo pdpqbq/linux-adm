@@ -1,0 +1,24 @@
+- name: edit hosts
+  blockinfile:
+    path: /etc/hosts
+    block: |
+      192.168.100.91 app1
+      192.168.100.92 app2
+      192.168.100.93 app3
+
+- name: install glusterfs repo
+  yum: name=centos-release-gluster state=present
+
+- name: install glusterfs-server
+  yum: name=glusterfs-server state=present
+
+- name: start glusterd
+  systemd: name=glusterd state=started enabled=yes
+
+- name: create brick
+  shell: |
+    mkfs.xfs -i size=512 /dev/sdb
+    mkdir -p /data/brick1
+    echo '/dev/sdb /data/brick1 xfs defaults 1 2' >> /etc/fstab
+    mount -a
+    mkdir -p /data/brick1/gv0

@@ -5,11 +5,8 @@
     cp -r /usr/lib/firewalld/zones /etc/firewalld/zones
     firewall-cmd --reload
 
-    firewall-cmd --zone=public --remove-interface=eth1
-    firewall-cmd --zone=public --remove-interface=eth2
-
-    firewall-cmd --zone=internal --add-interface=eth1
-    firewall-cmd --zone=external --add-interface=eth2
+    firewall-cmd --permanent --zone=internal --change-interface=eth1
+    firewall-cmd --permanent --zone=external --change-interface=eth2
 
     firewall-cmd --zone=internal --remove-service=dhcpv6-client
     firewall-cmd --zone=internal --remove-service=mdns

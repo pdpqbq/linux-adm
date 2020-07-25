@@ -21,7 +21,7 @@
     - nginx-ha
 
 - name: Mattermost + keepalived
-  hosts: app1 app2
+  hosts: app1 app2 app3
   gather_facts: yes
   become: yes
   roles:

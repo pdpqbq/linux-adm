@@ -5,15 +5,23 @@
     cp -r /usr/lib/firewalld/zones /etc/firewalld/zones
     firewall-cmd --reload
 
-    firewall-cmd --zone=public --remove-interface=eth1
-    firewall-cmd --zone=internal --add-interface=eth1
+    firewall-cmd --permanent --zone=internal --change-interface=eth1
 
     firewall-cmd --zone=internal --remove-service=dhcpv6-client
     firewall-cmd --zone=internal --remove-service=mdns
     firewall-cmd --zone=internal --remove-service=samba-client
 
+    # app
     firewall-cmd --zone=internal --add-port=8065/tcp
+    # node_exporter
     firewall-cmd --zone=internal --add-port=9100/tcp
+    # glusterfs
+    firewall-cmd --zone=internal --add-port=24007/tcp
+    firewall-cmd --zone=internal --add-port=24008/tcp
+    firewall-cmd --zone=internal --add-port=24007/udp
+    firewall-cmd --zone=internal --add-port=24008/udp
+    firewall-cmd --zone=internal --add-port=49152-49154/tcp
+
     firewall-cmd --zone=internal --add-rich-rule='rule protocol value="vrrp" accept'
 
     firewall-cmd --runtime-to-permanent

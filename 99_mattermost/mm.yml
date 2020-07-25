@@ -1,0 +1,81 @@
+---
+- name: fix keepalived script
+  hosts: app1 app2
+  gather_facts: yes
+  become: yes
+
+  tasks:
+  - shell: |
+      sed -i 's/MASTER").*/MASTER") \/usr\/bin\/systemctl start mattermost/' /usr/local/sbin/notify-keepalived.sh
+      sed -i 's/BACKUP").*/BACKUP") kill -9 `pidof mattermost` ; mount -a/' /usr/local/sbin/notify-keepalived.sh
+      sed -i 's/FAULT").*/FAULT")  kill -9 `pidof mattermost` ; umount \/opt\/mattermost -f/' /usr/local/sbin/notify-keepalived.sh
+      setenforce 0
+      systemctl reload keepalived
+
+- name: "node #1"
+  hosts: app1
+  gather_facts: yes
+  become: yes
+
+  tasks:
+  - name: create glusterfs volume
+    gluster_volume:
+      state: present
+      name: gv0
+      bricks: /data/brick1/gv0
+      replicas: 3
+      cluster:
+        - app1
+        - app2
+        - app3
+      start_on_create: yes
+
+  - name: set glusterfs options
+    gluster_volume:
+      name: gv0
+      state: present
+      options:
+        { performance.cache-size: 64MB,
+          performance.write-behind-window-size: 16MB,
+          write-behind: 'off',
+          quick-read: 'on',
+          network.ping-timeout: '3'
+        }
+
+  - name: move mattermost to glusterfs volume
+    shell: |
+        systemctl stop mattermost
+        mv /opt/mattermost /opt/mattermost.local
+        mkdir -p /opt/mattermost
+        echo "app2:/gv0 /opt/mattermost glusterfs defaults,_netdev 0 0" >> /etc/fstab
+        mount -a
+        cp -pr /opt/mattermost.local/* /opt/mattermost
+        systemctl start mattermost
+
+- name: "node #2"
+  hosts: app2
+  gather_facts: yes
+  become: yes
+
+  tasks:
+  - name: mount glusterfs
+    shell: |
+      systemctl stop mattermost
+      mv /opt/mattermost /opt/mattermost.local
+      mkdir -p /opt/mattermost
+      chown -R mattermost:mattermost /opt/mattermost
+      echo "app1:/gv0 /opt/mattermost glusterfs defaults,_netdev 0 0" >> /etc/fstab
+      mount -a
+      #systemctl start mattermost
+
+- name: "node #3"
+  hosts: app3
+  gather_facts: yes
+  become: yes
+
+  tasks:
+  - name: mount glusterfs
+    shell: |
+      mkdir -p /opt/mattermost
+      echo "app1:/gv0 /opt/mattermost glusterfs defaults,_netdev 0 0" >> /etc/fstab
+      mount -a

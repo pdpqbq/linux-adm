@@ -1,0 +1,147 @@
+---
+# tasks file for roles/mattermost-app
+
+- name: get wget
+  yum: name=wget state=present
+
+- name: install elastic repo
+  include_role:
+    name: common
+    tasks_from: repo_elastic.yml
+
+- name: install filebeat
+  yum: name=filebeat state=present
+
+- name: configure filebeat
+  copy:
+    src: filebeat.yml
+    dest: /etc/filebeat/filebeat.yml
+
+- name: start filebeat
+  systemd: name=filebeat state=started enabled=yes
+
+- name: include tasks for keepalived
+  include_role:
+    name: common
+    tasks_from: setup_keepalived.yml
+
+- name: install selinux tools
+  yum:
+    name: ['checkpolicy', 'policycoreutils-python', 'policycoreutils']
+    state: present
+
+- name: update selinux policies
+  yum:
+    name:
+      - selinux-policy
+      - selinux-policy-targeted
+    state: latest
+
+- name: create selinux module for keepalived
+  copy:
+    src: local_keepalived.te
+    dest: /tmp/
+
+- name: install selinux module for keepalived
+  shell: |
+    cd /tmp
+    checkmodule -M -m -o local_keepalived.mod local_keepalived.te
+    semodule_package -o local_keepalived.pp -m local_keepalived.mod
+    semodule -i local_keepalived.pp
+
+- name: install mattermost {{ mm_latest.split("/")[-2] }}
+  shell: |
+    if [ ! -d /opt/mattermost ]; then
+      cd /tmp
+      wget {{ mm_latest }}
+      tar xzf `basename {{ mm_latest }}`
+      mv mattermost /opt
+      mkdir /opt/mattermost/data
+      useradd --system --user-group mattermost
+      chown -R mattermost:mattermost /opt/mattermost
+      chmod -R g+w /opt/mattermost
+      touch /etc/systemd/system/mattermost.service
+      chmod 664 /etc/systemd/system/mattermost.service
+    fi
+
+- name: create systemd unit
+  blockinfile:
+    path: /etc/systemd/system/mattermost.service
+    block: |
+      [Unit]
+      Description=Mattermost
+      After=syslog.target network.target
+
+      [Service]
+      Type=notify
+      WorkingDirectory=/opt/mattermost
+      User=mattermost
+      ExecStart=/opt/mattermost/bin/mattermost
+      PIDFile=/var/spool/mattermost/pid/master.pid
+      TimeoutStartSec=3600
+      LimitNOFILE=49152
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: create mattermost config
+  template:
+    src: mm.conf.j2
+    dest: /opt/mattermost/config/config.json
+    owner: mattermost
+    group: mattermost
+    mode: 0600
+
+- name: create keepalived config
+  template:
+    src: keepalived.conf.j2
+    dest: /etc/keepalived/keepalived.conf
+  vars:
+    priority: 100
+  when: inventory_hostname == "app1"
+
+- name: create keepalived config
+  template:
+    src: keepalived.conf.j2
+    dest: /etc/keepalived/keepalived.conf
+  vars:
+    priority: 90
+  when: inventory_hostname == "app2"
+
+- name: create keepalived notify script
+  copy:
+    src: notify-keepalived.sh
+    dest: /usr/local/sbin/notify-keepalived.sh
+    mode: 0755
+
+- name: start services
+  systemd:
+    name: "{{ item }}"
+    daemon_reload: yes
+    enabled: yes
+    state: started
+  with_items:
+      - mattermost
+      - keepalived
+
+- include_role:
+    name: common
+    tasks_from: node_exporter.yml
+
+- name: setup firewall
+  include: firewall.yml
+
+#- include_role:
+#    name: common
+#    tasks_from: default_gw.yml
+
+- name: check log
+  shell: grep listening /opt/mattermost/logs/mattermost.log | tail -n 1 | awk -F"," '{ print $4 }' | sed 's/"msg"://'
+  register: mm_log
+
+- name: must be "Server is listening"
+  debug: msg="{{ mm_log.stdout }}"
+
+- include_role:
+    name: common
+    tasks_from: open_ports.yml

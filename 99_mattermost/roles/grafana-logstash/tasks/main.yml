@@ -135,9 +135,12 @@
 - name: setup firewall
   include: firewall.yml
 
-- include_role:
-    name: common
-    tasks_from: default_gw.yml
+- name: setup borg backup
+  include: borg-backup.yml
+  
+#- include_role:
+#    name: common
+#    tasks_from: default_gw.yml
 
 - include_role:
     name: common

@@ -1,7 +1,7 @@
 # -*- mode: ruby -*-
 # vim: set ft=ruby :
 
-vboxvms = ENV['HOME'] + '/Desktop/Files/VirtualBox VMs'
+vboxvms = ENV['HOME'] + '/VBox'
 
 MACHINES = {
   :ngx1 => {
@@ -19,6 +19,21 @@ MACHINES = {
                   {ip: '192.168.200.12', adapter: 3, netmask: "255.255.255.0"} # ext
                 ],
         :ram => 256
+  },
+  :adm1 => {
+        :box_name => "centos/7",
+        :net => [
+                  {ip: '192.168.100.20', adapter: 2, netmask: "255.255.255.0"}
+                ],
+        :ram => 1024
+  },
+  # adm2 for percona pmm
+  :adm2 => {
+        :box_name => "centos/7",
+        :net => [
+                  {ip: '192.168.100.30', adapter: 2, netmask: "255.255.255.0"}
+                ],
+        :ram => 1536
   },
   :pxc1 => {
         :box_name => "centos/7",
@@ -46,14 +61,14 @@ MACHINES = {
         :net => [
                   {ip: '192.168.100.104', adapter: 2, netmask: "255.255.255.0"}
                 ],
-        :ram => 512
+        :ram => 256
   },
   :sqlp2 => {
         :box_name => "centos/7",
         :net => [
                   {ip: '192.168.100.105', adapter: 2, netmask: "255.255.255.0"}
                 ],
-        :ram => 512
+        :ram => 256
   },
   :app1 => {
         :box_name => "centos/7",
@@ -63,7 +78,7 @@ MACHINES = {
                 ],
         :ram => 640,
         :disks => {
-                  :sata1 => { :dfile => './app1sdb.vdi', :size => 2048, :port => 1 }
+                  :sata1 => { :dfile => vboxvms + '/app1/app1sdb.vdi', :size => 2048, :port => 1 }
         }
   },
   :app2 => {
@@ -73,7 +88,7 @@ MACHINES = {
                 ],
         :ram => 640,
         :disks => {
-                  :sata1 => { :dfile => './app2sdb.vdi', :size => 2048, :port => 1 }
+                  :sata1 => { :dfile => vboxvms + '/app2/app2sdb.vdi', :size => 2048, :port => 1 }
         }
   },
   # gluster fs replica 3
@@ -82,25 +97,10 @@ MACHINES = {
         :net => [
                   {ip: '192.168.100.93', adapter: 2, netmask: "255.255.255.0"}
                 ],
-        :ram => 384,
+        :ram => 512,
         :disks => {
-                  :sata1 => { :dfile => './app3sdb.vdi', :size => 2048, :port => 1 }
+                  :sata1 => { :dfile => vboxvms + '/app3/app3sdb.vdi', :size => 2048, :port => 1 }
         }
-  },
-  :adm1 => {
-        :box_name => "centos/7",
-        :net => [
-                  {ip: '192.168.100.20', adapter: 2, netmask: "255.255.255.0"}
-                ],
-        :ram => 1024
-  },
-  # adm2 for percona pmm
-  :adm2 => {
-        :box_name => "centos/7",
-        :net => [
-                  {ip: '192.168.100.30', adapter: 2, netmask: "255.255.255.0"}
-                ],
-        :ram => 1536
   }
 }
 
@@ -142,9 +142,9 @@ Vagrant.configure("2") do |config|
         box.vm.network "private_network", ipconf
       end
 
-      if boxconfig.key?(:public)
-        box.vm.network "public_network", boxconfig[:public]
-      end
+#      if boxconfig.key?(:public)
+#        box.vm.network "public_network", boxconfig[:public]
+#      end
 
       box.vm.provision "ansible", playbook: "ansible.yml"#, verbose: "vvv"
     end

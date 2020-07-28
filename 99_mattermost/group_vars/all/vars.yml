@@ -19,4 +19,4 @@ node_exporter_latest: https://github.com/prometheus/node_exporter/releases/downl
 grafana_latest: https://dl.grafana.com/oss/release/grafana-7.1.0-1.x86_64.rpm
 
 # if setup pmm then true
-setup_pmm: false
+setup_pmm: true

@@ -11,7 +11,7 @@
     firewall-cmd --zone=internal --remove-service=mdns
     firewall-cmd --zone=internal --remove-service=samba-client
 
-    firewall-cmd --zone=internal --add-port=143/tcp
+    #firewall-cmd --zone=internal --add-port=143/tcp
     firewall-cmd --zone=internal --add-port=3000/tcp
     firewall-cmd --zone=internal --add-port=5044/tcp
     firewall-cmd --zone=internal --add-port=9090/tcp

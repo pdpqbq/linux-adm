@@ -38,7 +38,7 @@
         { performance.cache-size: 64MB,
           performance.write-behind-window-size: 16MB,
           write-behind: 'off',
-          quick-read: 'on',
+          performance.quick-read: 'on',
           network.ping-timeout: '3'
         }
 
@@ -47,7 +47,7 @@
         systemctl stop mattermost
         mv /opt/mattermost /opt/mattermost.local
         mkdir -p /opt/mattermost
-        echo "app2:/gv0 /opt/mattermost glusterfs defaults,_netdev 0 0" >> /etc/fstab
+        echo "app1:/gv0 /opt/mattermost glusterfs defaults,_netdev 0 0" >> /etc/fstab
         mount -a
         cp -pr /opt/mattermost.local/* /opt/mattermost
         systemctl start mattermost
@@ -64,7 +64,7 @@
       mv /opt/mattermost /opt/mattermost.local
       mkdir -p /opt/mattermost
       chown -R mattermost:mattermost /opt/mattermost
-      echo "app1:/gv0 /opt/mattermost glusterfs defaults,_netdev 0 0" >> /etc/fstab
+      echo "app2:/gv0 /opt/mattermost glusterfs defaults,_netdev 0 0" >> /etc/fstab
       mount -a
       #systemctl start mattermost
 

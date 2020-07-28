@@ -1,0 +1,14 @@
+- name: install percona-xtrabackup-80
+  yum: name=percona-xtrabackup-80 state=present
+
+- name: create backup dir
+  command: mkdir -p /data/backups
+
+- name: create backup script
+  copy:
+    src: backup-mysql.sh
+    dest: ~/
+    mode: 0700
+
+- name: create cron job
+  shell: (crontab -l; echo "0 * * * * /root/backup-mysql.sh  >> /var/log/backup-mysql.log 2>&1") | crontab

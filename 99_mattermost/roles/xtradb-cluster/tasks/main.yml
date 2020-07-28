@@ -111,6 +111,10 @@
   include: pmm2_client.yml
   when: setup_pmm == true
 
+- name: "include xtrabackup on node #1"
+  include: xtrabackup.yml
+  when: inventory_hostname == "pxc1"
+
 - include_role:
     name: common
     tasks_from: open_ports.yml

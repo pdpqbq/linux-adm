@@ -1,8 +1,12 @@
 ---
 # tasks file for roles/grafana-logstash
 
-- yum: name=wget state=present
-- yum: name=tree state=present
+- name: install wget, tree
+  yum:
+    name:
+      - wget
+      - tree
+    state: present
 
 - name: install elastic repo
   include_role:
@@ -33,7 +37,7 @@
       rm -f `basename {{ prometheus_latest }}`
     fi
 
-- name: install grafana
+- name: install {{ grafana_latest.split("/")[-1] }}
   yum: name={{ grafana_latest }} state=present
 
 - name: create systemd unit for prometheus
@@ -75,6 +79,7 @@
               - 192.168.100.12:9100
               - 192.168.100.91:9100
               - 192.168.100.92:9100
+              - 192.168.100.93:9100
               - 192.168.100.101:9100
               - 192.168.100.102:9100
               - 192.168.100.103:9100
@@ -137,7 +142,7 @@
 
 - name: setup borg backup
   include: borg-backup.yml
-  
+
 #- include_role:
 #    name: common
 #    tasks_from: default_gw.yml

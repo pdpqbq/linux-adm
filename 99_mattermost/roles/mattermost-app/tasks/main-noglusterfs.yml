@@ -121,7 +121,7 @@
     enabled: yes
     state: started
   with_items:
-      - mattermost
+      #- mattermost
       - keepalived
 
 - include_role:
@@ -138,9 +138,11 @@
 - name: check log
   shell: grep listening /opt/mattermost/logs/mattermost.log | tail -n 1 | awk -F"," '{ print $4 }' | sed 's/"msg"://'
   register: mm_log
+  when: inventory_hostname == "app1"
 
 - name: must be "Server is listening"
   debug: msg="{{ mm_log.stdout }}"
+  when: inventory_hostname == "app1"
 
 - include_role:
     name: common

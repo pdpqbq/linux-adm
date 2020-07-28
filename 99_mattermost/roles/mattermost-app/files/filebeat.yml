@@ -26,6 +26,11 @@ filebeat.inputs:
     - /var/log/keepalived.log
   include_lines: ['MASTER', 'BACKUP', 'FAULT']
 
+- type: log
+  enabled: true
+  paths:
+    - /var/log/borg.log
+
 # Exclude lines. A list of regular expressions to match. It drops the lines that are
   # matching any regular expression from the list.
   #exclude_lines: ['^DBG']

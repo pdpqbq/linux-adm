@@ -1,0 +1,23 @@
+version: "3.1"
+services:
+
+    gocd:
+      image: gocd/gocd-server:v20.6.0
+      container_name: gocd
+      ports:
+        - "8153:8153"
+        - "8154:8154"
+
+    ghost:
+      image: ghost:latest
+      container_name: ghost
+      environment:
+        - url=http://192.168.100.10:2368
+      ports:
+        - "2368:2368"
+
+    wordpress:
+      image: wordpress:latest
+      container_name: wordpress
+      ports:
+        - "80:80"

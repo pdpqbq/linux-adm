@@ -1,0 +1,64 @@
+---
+- name: dynamic web
+  hosts: all
+  become: yes
+  gather_facts: no
+
+  tasks:
+
+    - name: disable selinux
+      selinux:
+        state: disabled
+
+    - name: install epel-release
+      yum: name=epel-release state=present
+
+    - name: install nginx
+      yum:
+        name:
+          - nginx
+          - docker
+          - docker-compose
+        state: present
+
+    - name: create nginx config
+      copy:
+        src: conf/nginx.conf
+        dest: /etc/nginx/nginx.conf
+        mode: 0644
+
+    - name: create sites config
+      copy:
+        src: conf/dynamic_web.conf
+        dest: /etc/nginx/conf.d/
+
+    - name: start services
+      shell: |
+        ln -s /etc/nginx/conf.d/dynamic_web.conf /etc/nginx/conf.d/default.conf
+        systemctl enable --now nginx
+        systemctl enable --now docker
+
+    - name: create docker-compose.yml
+      copy:
+        src: conf/docker-compose.yml
+        dest: ~/
+
+    - name: start docker-compose
+      command: docker-compose -f /root/docker-compose.yml up -d
+
+    - name: wait services to load
+      shell: |
+        curl -s localhost:80 > /dev/null; while [ ! $? = 0 ]; do curl -s localhost:80 > /dev/null; done
+        curl -s localhost:2368 > /dev/null; while [ ! $? = 0 ]; do curl -s localhost:2368 > /dev/null; done
+        curl -s localhost:8153 > /dev/null; while [ ! $? = 0 ]; do curl -s localhost:8153 > /dev/null; done
+
+    - shell: |
+        ss -tlnp | grep docker-proxy | awk '{printf "%-30s%s\n",$4,$6}'
+      register: ss_out
+
+    - debug:
+        msg: "{{ ss_out.stdout.split('\n') }}"
+
+#docker run -d -p8153:8153 -p8154:8154 --name gocd gocd/gocd-server:v20.6.0
+#docker run -d -p 3001:2368 --name ghost -e url=http://localhost:3001 ghost:latest
+#docker run -d -p 8080:80 --name wordpress wordpress:latest

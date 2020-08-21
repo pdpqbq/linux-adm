@@ -1,0 +1,8 @@
+---
+- name: firewall fix ext
+  hosts: all
+  gather_facts: yes
+  become: yes
+
+  tasks:
+  - command: firewall-cmd --change-interface=eth2 --zone=external --permanent

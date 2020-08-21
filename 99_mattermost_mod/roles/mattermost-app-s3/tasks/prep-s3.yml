@@ -1,0 +1,79 @@
+- name: edit hosts
+  blockinfile:
+    path: /etc/hosts
+    block: |
+      192.168.100.91 app1
+      192.168.100.92 app2
+      192.168.100.93 app3
+
+- name: create drives for minio
+  shell: |
+    mkfs.xfs -i size=512 /dev/sdb
+    mkfs.xfs -i size=512 /dev/sdc
+    mkfs.xfs -i size=512 /dev/sdd
+    mkfs.xfs -i size=512 /dev/sde
+
+    mkdir -p /data/drive1
+    mkdir -p /data/drive2
+    mkdir -p /data/drive3
+    mkdir -p /data/drive4
+
+    mount /dev/sdb /data/drive1
+    mount /dev/sdc /data/drive2
+    mount /dev/sdd /data/drive3
+    mount /dev/sde /data/drive4
+
+    echo '/dev/sdb /data/drive1 xfs defaults 1 2' >> /etc/fstab
+    echo '/dev/sdc /data/drive2 xfs defaults 1 2' >> /etc/fstab
+    echo '/dev/sdd /data/drive3 xfs defaults 1 2' >> /etc/fstab
+    echo '/dev/sde /data/drive4 xfs defaults 1 2' >> /etc/fstab
+
+    adduser -M -s /sbin/nologin minio
+
+    chown -R minio /data
+    chmod -R 700 /data
+
+#- name: copy
+#  command: mkdir /opt/minio
+
+#- copy:
+#    src: minio
+#    dest: /opt/minio
+
+#- copy:
+#    src: mc
+#    dest: /opt/minio
+
+- name: install minio
+  shell: |
+    if [ ! -d /opt/minio ]; then
+      mkdir /opt/minio
+      cd /opt/minio
+      wget https://dl.min.io/server/minio/release/linux-amd64/minio
+      wget https://dl.min.io/client/mc/release/linux-amd64/mc
+      chmod +x minio
+      chmod +x mc
+      cp minio /usr/local/bin
+      mkdir /root/.mc
+    fi
+
+- name: create minio server config
+  template:
+    src: minio-server.j2
+    dest: /etc/default/minio
+
+- name: create minio client config
+  template:
+    src: minio-client.j2
+    dest: ~/.mc/config.json
+
+- name: create minio systemd unit
+  copy:
+    src: minio.service
+    dest: /etc/systemd/system
+
+- name: start minio
+  systemd:
+    name: minio
+    enabled: yes
+    state: started

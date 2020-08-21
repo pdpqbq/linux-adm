@@ -1,0 +1,20 @@
+---
+# tasks file for roles/mattermost-app
+
+- name: "setup nodes #1 and #2"
+  include: main-noglusterfs.yml
+  when: inventory_hostname != "app3"
+
+- name: setup glusterfs
+  include: prep-glusterfs.yml
+
+- include_role:
+    name: common
+    tasks_from: node_exporter.yml
+
+- name: setup firewall
+  include: firewall.yml
+
+- name: setup borg backup
+  include: borg-backup.yml
+  when: inventory_hostname == "app3"

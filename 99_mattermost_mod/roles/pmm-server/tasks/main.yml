@@ -1,0 +1,39 @@
+---
+# tasks file for roles/pmm-server
+
+- name: setup firewall
+  include: firewall.yml
+  when: setup_pmm == true
+
+- name: install pmm docker container
+  shell: |
+    yum install -y docker
+    systemctl enable --now docker
+    docker pull percona/pmm-server:2
+    docker create \
+     -v /srv \
+     --name pmm-data \
+     percona/pmm-server:2 /bin/true
+    docker run -d \
+     -p 80:80 \
+     -p 443:443 \
+     --volumes-from pmm-data \
+     --name pmm-server \
+     --restart always \
+     percona/pmm-server:2
+  when: setup_pmm == true
+
+- include_role:
+    name: common
+    tasks_from: open_ports.yml
+  when: setup_pmm == true
+
+- debug:
+    msg: web-interface login admin:admin on http or https://{{ ansible_eth1.ipv4.address }}
+  when: setup_pmm == true
+
+- command: /sbin/shutdown -h now
+  when: setup_pmm != true
+
+- local_action: wait_for host={{ ansible_ssh_host }} port={{ ansible_ssh_port }} state=stopped
+  when: setup_pmm != true

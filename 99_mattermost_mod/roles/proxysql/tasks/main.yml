@@ -1,0 +1,86 @@
+---
+# tasks file for roles/proxysql
+
+- name: install percona repo
+  yum:
+    name: https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+    state: present
+
+- name: install elastic repo
+  include_role:
+    name: common
+    tasks_from: repo_elastic.yml
+
+- name: install filebeat
+  yum: name=filebeat state=present
+
+- name: configure percona repo for pxc-80
+  shell: |
+    percona-release enable-only pxc-80 release
+    percona-release enable tools release
+
+- name: install packages
+  yum:
+    name:
+      - percona-xtradb-cluster-client
+      - proxysql2
+    state: present
+    disable_gpg_check: yes
+
+- name: configure filebeat
+  copy:
+    src: filebeat.yml
+    dest: /etc/filebeat/filebeat.yml
+
+- name: start filebeat
+  systemd: name=filebeat state=started enabled=yes
+
+- name: include tasks for keepalived
+  include_role:
+    name: common
+    tasks_from: setup_keepalived.yml
+
+- name: update selinux policies
+  yum:
+    name:
+      - selinux-policy
+      - selinux-policy-targeted
+    state: latest
+
+- name: configure keepalived
+  template:
+    src: keepalived.conf.j2
+    dest: /etc/keepalived/keepalived.conf
+  vars:
+    state: MASTER
+    priority: 100
+  when: inventory_hostname == "sqlp1"
+
+- name: configure keepalived
+  template:
+    src: keepalived.conf.j2
+    dest: /etc/keepalived/keepalived.conf
+  vars:
+    state: BACKUP
+    priority: 90
+  when: inventory_hostname == "sqlp2"
+
+- name: start proxysql
+  systemd: name=proxysql.service state=started enabled=yes
+
+- name: start keepalived
+  systemd: name=keepalived state=restarted enabled=yes
+
+- include_role:
+    name: common
+    tasks_from: node_exporter.yml
+
+- name: setup firewall
+  include: firewall.yml
+
+- name: include sql commands
+  include: sqlp_sql_commands.yml
+
+- include_role:
+    name: common
+    tasks_from: open_ports.yml

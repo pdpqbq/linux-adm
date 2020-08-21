@@ -1,0 +1,26 @@
+---
+# tasks file for roles/mattermost-app
+
+- name: get wget
+  yum: name=wget state=present
+
+- name: setup minio
+  include: prep-s3.yml
+
+- name: wait for minio
+  shell: |
+    grep "0 Offline" /var/log/messages > /dev/null
+    while [ $? eq 1 ]; do grep "0 Offline" /var/log/messages > /dev/null; sleep 1; done
+    /opt/minio/mc mb local/mattermost
+  when: inventory_hostname == "app1"
+
+- name: "setup nodes #1 and #2"
+  include: main-noglusterfs.yml
+  when: inventory_hostname != "app3"
+
+#- name: "borg backup @ node #3"
+#  include: borg-backup.yml
+#  when: inventory_hostname == "app3"
+
+#- name: setup firewall
+#  include: firewall.yml

@@ -1,0 +1,120 @@
+---
+# tasks file for roles/xtradb-cluster
+
+- name: disable selinux
+  selinux: state=disabled
+
+- name: install percona repo
+  yum:
+    name: https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+    state: present
+
+- name: install elastic repo
+  include_role:
+    name: common
+    tasks_from: repo_elastic.yml
+
+- name: install filebeat
+  yum: name=filebeat state=present
+
+- name: configure filebeat
+  copy:
+    src: filebeat.yml
+    dest: /etc/filebeat/filebeat.yml
+
+- name: start filebeat
+  systemd: name=filebeat state=started enabled=yes
+
+- name: configure percona repo for pxc-80
+  shell: |
+    percona-release enable-only pxc-80 release
+    percona-release enable tools release
+
+- name: install percona-xtradb-cluster
+  yum:
+    name:
+      - percona-xtradb-cluster
+    state: present
+
+- name: start mysql
+  systemd: name=mysql state=started
+
+- name: get temporary mysql password
+  command: awk '$0 ~ "temporary password" {print $13}' /var/log/mysqld.log
+  register: temp_sql_password
+
+- name: temporary mysql password
+  debug: msg="{{ temp_sql_password.stdout }}"
+
+- name: copy .my.cnf file with root password credentials
+  template:
+    src: .my.cnf.j2
+    dest: /root/.my.cnf
+    owner: root
+    group: root
+    mode: 0600
+
+- name: set root mysql password
+  shell: mysql -u root --password="{{ temp_sql_password.stdout }}" -NBe 'ALTER USER "root"@"localhost" IDENTIFIED WITH mysql_native_password BY "{{ mysql_root_password }}";' --connect-expired-password
+
+- name: stop mysql
+  systemd: name=mysql state=stopped
+
+- name: put my.cnf in /etc
+  template:
+    src: my.cnf.j2
+    dest: /etc/my.cnf
+    owner: root
+    group: root
+    mode: 0644
+
+- name: put ssl certificates in /var/lib/mysql
+  copy:
+    src: files/pxc-certs/
+    dest: /var/lib/mysql
+
+# for testing
+- name: edit grastate.dat
+  shell: |
+    sed -i 's/safe_to_bootstrap: 0/safe_to_bootstrap: 1/' /var/lib/mysql/grastate.dat
+  when: inventory_hostname == "pxc1"
+
+- name: "bootstrap node #1"
+  systemd:
+    name: mysql@bootstrap.service
+    state: started
+  when: inventory_hostname == "pxc1"
+
+- name: "start node #2"
+  systemd:
+    name: mysql
+    state: started
+  when: inventory_hostname == "pxc2"
+
+- name: "start node #3"
+  systemd:
+    name: mysql
+    state: started
+  when: inventory_hostname == "pxc3"
+
+- include_role:
+    name: common
+    tasks_from: node_exporter.yml
+
+- name: setup firewall
+  include: firewall.yml
+
+- name: include sql commands
+  include: pxc_sql_commands.yml
+
+- name: include pmm2 client setup
+  include: pmm2_client.yml
+  when: setup_pmm == true
+
+- name: "include xtrabackup on node #1"
+  include: xtrabackup.yml
+  when: inventory_hostname == "pxc1"
+
+- include_role:
+    name: common
+    tasks_from: open_ports.yml

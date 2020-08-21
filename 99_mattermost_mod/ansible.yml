@@ -1,0 +1,43 @@
+---
+- name: Percona XtraDB Cluster
+  hosts: pxc1 pxc2 pxc3
+  gather_facts: yes
+  become: yes
+  roles:
+    - xtradb-cluster
+
+- name: ProxySQL + keepalived
+  hosts: sqlp1 sqlp2
+  gather_facts: yes
+  become: yes
+  roles:
+    - proxysql
+
+- name: Nginx + keepalived
+  hosts: ngx1 ngx2
+  gather_facts: yes
+  become: yes
+  roles:
+    - nginx-ha
+
+- name: Mattermost + keepalived
+  hosts: app1 app2 app3
+  gather_facts: yes
+  become: yes
+  roles:
+    - mattermost-app-s3
+
+- name: Percona Monitoring and Management
+  hosts: adm2
+  gather_facts: yes
+  become: yes
+  roles:
+    - role: pmm-server
+    #  when: setup_pmm == true
+
+- name: Monitoring + Backup + Logging
+  hosts: adm1
+  gather_facts: yes
+  become: yes
+  roles:
+    - grafana-logstash

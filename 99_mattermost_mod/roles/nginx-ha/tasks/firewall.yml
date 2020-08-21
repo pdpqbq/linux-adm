@@ -1,0 +1,33 @@
+- name: setup firewall
+  shell: |
+    systemctl enable --now firewalld
+    rm -rf /etc/firewalld/zones/
+    cp -r /usr/lib/firewalld/zones /etc/firewalld/zones
+    firewall-cmd --reload
+
+    firewall-cmd --permanent --zone=internal --change-interface=eth1
+    firewall-cmd --permanent --zone=external --change-interface=eth2
+
+    firewall-cmd --zone=internal --remove-service=dhcpv6-client
+    firewall-cmd --zone=internal --remove-service=mdns
+    firewall-cmd --zone=internal --remove-service=samba-client
+
+    firewall-cmd --zone=external --remove-service=ssh
+
+    firewall-cmd --zone=internal --add-service=http
+    firewall-cmd --zone=internal --add-port=9100/tcp
+    firewall-cmd --zone=internal --add-rich-rule='rule protocol value="vrrp" accept'
+
+    firewall-cmd --zone=external --add-service=http
+    firewall-cmd --zone=external --add-rich-rule='rule protocol value="vrrp" accept'
+
+    # nat
+    firewall-cmd --add-masquerade --zone=public
+    firewall-cmd --remove-masquerade --zone=external
+
+    firewall-cmd --runtime-to-permanent
+    firewall-cmd --reload
+
+    # forwarding
+    echo "net.ipv4.conf.all.forwarding = 1" >> /etc/sysctl.d/sysctl.conf
+    service network restart

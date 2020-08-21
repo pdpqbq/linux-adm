@@ -1,0 +1,37 @@
+- name: install epel-release
+  yum:
+    name: epel-release
+    state: present
+
+- name: install borg
+  yum:
+    name: borgbackup
+    state: present
+
+- name: copy ssh priv key
+  copy:
+    src: id_rsa
+    dest: /root/.ssh/
+    mode: 0600
+
+- name: setup ssh
+  shell: |
+    chmod 700 /root/.ssh
+    echo 'Host *' >> /root/.ssh/config
+    echo 'StrictHostKeyChecking no' >> /root/.ssh/config
+    echo 'UserKnownHostsFile /dev/null' >> /root/.ssh/config
+    chmod 600 /root/.ssh/config
+  args:
+    warn: false
+
+- name: create backup script
+  copy:
+    src: backup-mm.sh
+    dest: ~/
+    mode: 0700
+
+- name: init borg repo
+  command: borg init -e none root@192.168.100.20:mm-files
+
+- name: create cron job
+  shell: (crontab -l; echo "*/15 * * * * /root/backup-mm.sh  >> /var/log/borg.log 2>&1") | crontab

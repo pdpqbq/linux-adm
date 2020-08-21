@@ -1,0 +1,41 @@
+---
+- name: fix keepalived script
+  hosts: app1 app2
+  gather_facts: yes
+  become: yes
+
+  tasks:
+  - shell: |
+      sed -i 's/MASTER").*/MASTER") \/usr\/bin\/systemctl start mattermost/' /usr/local/sbin/notify-keepalived.sh
+      sed -i 's/BACKUP").*/BACKUP") kill -9 `pidof mattermost` ; mount -a/' /usr/local/sbin/notify-keepalived.sh
+      sed -i 's/FAULT").*/FAULT")  kill -9 `pidof mattermost` ; umount \/opt\/mattermost -f/' /usr/local/sbin/notify-keepalived.sh
+      setenforce 0
+      systemctl reload keepalived
+
+- name: "node #2"
+  hosts: app1
+  gather_facts: yes
+  become: yes
+
+  tasks:
+  - name: run minio
+    shell: |
+      export MINIO_ACCESS_KEY=minio
+      export MINIO_SECRET_KEY=minio123
+      ./minio server http://app{1...2}:9000/data/drive{1...4} &
+
+- name: "node #1"
+  hosts: app1
+  gather_facts: yes
+  become: yes
+
+  tasks:
+  - name: run minio
+    shell: |
+      systemctl stop mattermost
+      export MINIO_ACCESS_KEY=minio
+      export MINIO_SECRET_KEY=minio123
+      ./minio server http://app{1...2}:9000/data/drive{1...4} &
+      sleep 15
+      /opt/minio/mc mb local/test
+      systemctl start mattermost

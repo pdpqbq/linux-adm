@@ -1,0 +1,8 @@
+- name: install percona packages
+  yum: name=pmm2-client state=present
+
+# use root password for testing only
+- name: register pmm client
+  shell: |
+    pmm-admin config {{ ansible_eth1.ipv4.address }} --server-insecure-tls --server-url=https://admin:admin@192.168.100.30:443
+    pmm-admin add mysql --username=root --password={{ mysql_root_password }}

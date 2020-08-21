@@ -1,0 +1,19 @@
+- name: connect proxysql to percona cluster
+  shell: mysql -u admin -padmin -h 127.0.0.1 -P 6032 -NBe "{{ item }}"
+  with_items:
+    #- "INSERT INTO mysql_servers(hostgroup_id, hostname, port) VALUES (0,'192.168.100.101',3306);"
+    - "INSERT INTO mysql_servers(hostgroup_id, hostname, port) VALUES (0,'192.168.100.102',3306);"
+    - "INSERT INTO mysql_servers(hostgroup_id, hostname, port) VALUES (0,'192.168.100.103',3306);"
+
+    - "UPDATE global_variables SET variable_value='proxysql' WHERE variable_name='mysql-monitor_username';"
+    - "UPDATE global_variables SET variable_value='{{ proxysql_password }}' WHERE variable_name='mysql-monitor_password';"
+
+    - "INSERT INTO mysql_users (username,password) VALUES ('sbuser','{{ sbuser_password }}');"
+    - "INSERT INTO mysql_users (username, password, default_hostgroup) VALUES ('mmuser','{{ mmuser_password }}',0);"
+
+    - "LOAD MYSQL VARIABLES TO RUNTIME;"
+    - "SAVE MYSQL VARIABLES TO DISK;"
+    - "LOAD MYSQL SERVERS TO RUNTIME;"
+    - "SAVE MYSQL SERVERS TO DISK;"
+    - "LOAD MYSQL USERS TO RUNTIME;"
+    - "SAVE MYSQL USERS TO DISK;"

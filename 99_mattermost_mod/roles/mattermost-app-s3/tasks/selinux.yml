@@ -1,0 +1,23 @@
+- name: install selinux tools
+  yum:
+    name: ['checkpolicy', 'policycoreutils-python', 'policycoreutils']
+    state: present
+
+- name: update selinux policies
+  yum:
+    name:
+      - selinux-policy
+      - selinux-policy-targeted
+    state: latest
+
+- name: create selinux module for keepalived
+  copy:
+    src: local_keepalived.te
+    dest: /tmp/
+
+- name: install selinux module for keepalived
+  shell: |
+    cd /tmp
+    checkmodule -M -m -o local_keepalived.mod local_keepalived.te
+    semodule_package -o local_keepalived.pp -m local_keepalived.mod
+    semodule -i local_keepalived.pp

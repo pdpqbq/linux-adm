@@ -1,0 +1,4 @@
+---
+# vars file for roles/nginx-ha
+
+server_name: "{{ site_url.split('//')[1] }}"

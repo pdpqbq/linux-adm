@@ -1,0 +1,19 @@
+module local_keepalived 1.0;
+
+require {
+	type systemd_unit_file_t;
+	type systemd_systemctl_exec_t;
+	type system_dbusd_t;
+	type init_t;
+	type keepalived_t;
+	class unix_stream_socket connectto;
+	class file { execute execute_no_trans getattr open read };
+	class service { start status stop };
+}
+
+#============= keepalived_t ==============
+
+allow keepalived_t init_t:unix_stream_socket connectto;
+allow keepalived_t system_dbusd_t:unix_stream_socket connectto;
+allow keepalived_t systemd_systemctl_exec_t:file { execute execute_no_trans getattr open read };
+allow keepalived_t systemd_unit_file_t:service { start status stop };

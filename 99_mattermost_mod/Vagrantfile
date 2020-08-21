@@ -1,0 +1,159 @@
+# -*- mode: ruby -*-
+# vim: set ft=ruby :
+
+vboxvms = ENV['HOME'] + '/VBox'
+
+MACHINES = {
+  :ngx1 => {
+        :box_name => "centos/7",
+        :net => [
+                  {ip: '192.168.100.11', adapter: 2, netmask: "255.255.255.0"},
+                  {ip: '192.168.200.11', adapter: 3, netmask: "255.255.255.0"} # ext
+                ],
+        :ram => 256
+  },
+  :ngx2 => {
+        :box_name => "centos/7",
+        :net => [
+                  {ip: '192.168.100.12', adapter: 2, netmask: "255.255.255.0"},
+                  {ip: '192.168.200.12', adapter: 3, netmask: "255.255.255.0"} # ext
+                ],
+        :ram => 256
+  },
+  :adm1 => {
+        :box_name => "centos/7",
+        :net => [
+                  {ip: '192.168.100.20', adapter: 2, netmask: "255.255.255.0"}
+                ],
+        :ram => 1024
+  },
+  # adm2 for percona pmm
+  :adm2 => {
+        :box_name => "centos/7",
+        :net => [
+                  {ip: '192.168.100.30', adapter: 2, netmask: "255.255.255.0"}
+                ],
+        :ram => 1536
+  },
+  :pxc1 => {
+        :box_name => "centos/7",
+        :net => [
+                  {ip: '192.168.100.101', adapter: 2, netmask: "255.255.255.0"}
+                ],
+        :ram => 512
+  },
+  :pxc2 => {
+        :box_name => "centos/7",
+        :net => [
+                  {ip: '192.168.100.102', adapter: 2, netmask: "255.255.255.0"}
+                ],
+        :ram => 512
+  },
+  :pxc3 => {
+        :box_name => "centos/7",
+        :net => [
+                  {ip: '192.168.100.103', adapter: 2, netmask: "255.255.255.0"}
+                ],
+        :ram => 512
+  },
+  :sqlp1 => {
+        :box_name => "centos/7",
+        :net => [
+                  {ip: '192.168.100.104', adapter: 2, netmask: "255.255.255.0"}
+                ],
+        :ram => 256
+  },
+  :sqlp2 => {
+        :box_name => "centos/7",
+        :net => [
+                  {ip: '192.168.100.105', adapter: 2, netmask: "255.255.255.0"}
+                ],
+        :ram => 256
+  },
+  :app3 => {
+        :box_name => "centos/7",
+        :net => [
+                  {ip: '192.168.100.93', adapter: 2, netmask: "255.255.255.0"}
+                ],
+        :ram => 512,
+        :disks => {
+                  :sata1 => { :dfile => vboxvms + '/app3/sdb.vdi', :size => 1024, :port => 1 },
+                  :sata2 => { :dfile => vboxvms + '/app3/sdc.vdi', :size => 1024, :port => 2 },
+                  :sata3 => { :dfile => vboxvms + '/app3/sdd.vdi', :size => 1024, :port => 3 },
+                  :sata4 => { :dfile => vboxvms + '/app3/sde.vdi', :size => 1024, :port => 4 }
+        }
+  },
+  :app2 => {
+        :box_name => "centos/7",
+        :net => [
+                  {ip: '192.168.100.92', adapter: 2, netmask: "255.255.255.0"}
+                ],
+        :ram => 640,
+        :disks => {
+                  :sata1 => { :dfile => vboxvms + '/app2/sdb.vdi', :size => 1024, :port => 1 },
+                  :sata2 => { :dfile => vboxvms + '/app2/sdc.vdi', :size => 1024, :port => 2 },
+                  :sata3 => { :dfile => vboxvms + '/app2/sdd.vdi', :size => 1024, :port => 3 },
+                  :sata4 => { :dfile => vboxvms + '/app2/sde.vdi', :size => 1024, :port => 4 }
+        }
+  },
+  :app1 => {
+        :box_name => "centos/7",
+        :net => [
+                  {ip: '192.168.100.91', adapter: 2, netmask: "255.255.255.0"}
+                ],
+        :ram => 640,
+        :disks => {
+                  :sata1 => { :dfile => vboxvms + '/app1/sdb.vdi', :size => 1024, :port => 1 },
+                  :sata2 => { :dfile => vboxvms + '/app1/sdc.vdi', :size => 1024, :port => 2 },
+                  :sata3 => { :dfile => vboxvms + '/app1/sdd.vdi', :size => 1024, :port => 3 },
+                  :sata4 => { :dfile => vboxvms + '/app1/sde.vdi', :size => 1024, :port => 4 }
+        }
+  }
+}
+
+Vagrant.configure("2") do |config|
+
+  MACHINES.each do |boxname, boxconfig|
+
+    #config.vbguest.auto_update = false
+    config.vm.synced_folder '.', '/vagrant', disabled: true
+    config.ssh.insert_key = false
+
+    config.vm.define boxname do |box|
+
+      box.vm.box = boxconfig[:box_name]
+      box.vm.host_name = boxname.to_s
+
+      box.vm.provider "virtualbox" do |vb|
+        vb.customize ["modifyvm", :id, "--memory", boxconfig[:ram]]
+        vb.name = boxname.to_s
+        case boxname.to_s
+        when "app1", "app2", "app3"
+          needsController = false
+          boxconfig[:disks].each do |dname, dconf|
+            unless File.exist?(dconf[:dfile])
+              vb.customize ['createhd', '--filename', dconf[:dfile], '--size', dconf[:size]]
+              needsController = true
+            end
+          end
+          if needsController == true
+            vb.customize ["storagectl", :id, "--name", "SATA", "--add", "sata" ]
+            boxconfig[:disks].each do |dname, dconf|
+              vb.customize ['storageattach', :id,  '--storagectl', 'SATA', '--port', dconf[:port], '--device', 0, '--type', 'hdd', '--medium', dconf[:dfile]]
+            end
+          end
+        end
+      end
+
+      boxconfig[:net].each do |ipconf|
+        box.vm.network "private_network", ipconf
+      end
+
+#      if boxconfig.key?(:public)
+#        box.vm.network "public_network", boxconfig[:public]
+#      end
+
+      box.vm.provision "ansible", playbook: "ansible.yml"#, verbose: "vvv"
+    end
+  end
+end
